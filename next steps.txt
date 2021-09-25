@@ -1,0 +1,2 @@
+1. insert statements for patients from file
+- parse out the 'p' and run statements

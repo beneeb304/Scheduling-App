@@ -1,0 +1,47 @@
+CREATE TABLE Doctors 
+                            (TUID int IDENTITY(1,1) PRIMARY KEY,
+                            FirstName varchar(50) NOT NULL,
+                            LastName varchar(50) NOT NULL)
+
+CREATE TABLE Availability
+                            (TUID int IDENTITY(1,1) PRIMARY KEY,
+                            DoctorTUID int FOREIGN KEY REFERENCES Doctors(TUID) NOT NULL,
+                            Day char(1) NOT NULL,
+                            StartTime Time(0) NOT NULL,
+                            EndTime Time(0) NOT NULL,
+                            PatientCount int NOT NULL)
+
+CREATE TABLE Patients
+                            (TUID int IDENTITY(1,1) PRIMARY KEY,
+                            FirstName varchar(50) NOT NULL,
+                            LastName varchar(50) NOT NULL,
+                            Phone varchar(8) NOT NULL,
+                            Insurance varchar(20) NOT NULL)
+
+CREATE TABLE Appointments
+                            (TUID int IDENTITY(1,1) PRIMARY KEY,
+                            PatientTUID int FOREIGN KEY REFERENCES Patients(TUID) NOT NULL,
+                            DoctorTUID int FOREIGN KEY REFERENCES Doctors(TUID) NOT NULL,
+                            Day Date NOT NULL,
+                            AppointmentLength int NOT NULL,
+                            StartTime Time(0) NOT NULL,
+                            EndTime Time(0) NOT NULL)
+
+------------------------------------------------------------------------------------------------------------------------------------
+
+INSERT INTO Doctors VALUES 
+                            ('Ray', 'Strantz'),
+                            ('Henry', 'Jones, Jr.'),
+                            ('Emmett', 'Brown')
+
+INSERT INTO Availability VALUES 
+                            (1, 'M', '10:00', '14:00', 7), 
+                            (1, 'W', '10:00', '14:00', 7),
+                            (1, 'F', '10:00', '14:00', 7),
+                            (2, 'M', '8:00', '13:00', 8),
+                            (2, 'W', '8:00', '13:00', 8),
+                            (2, 'R', '8:00', '13:00', 8),
+                            (3, 'M', '11:00', '16:00', 9),
+                            (3, 'T', '11:00', '16:00', 9),
+                            (3, 'R', '11:00', '16:00', 9),
+                            (3, 'F', '11:00', '16:00', 9)
