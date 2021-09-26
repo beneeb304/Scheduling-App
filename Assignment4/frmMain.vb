@@ -23,6 +23,9 @@ Public Class frmMain
     End Sub
 
     Private Sub CreateDatabase(ByVal strSERVERNAME As String, ByVal strDBNAME As String, ByVal strDBPATH As String, ByVal strCONNECTION As String)
+
+        'Credit to CIS 311 ch 15 notes.
+
         'Build a SQL Server database from scratch
         Dim DBConn As SqlConnection
         Dim strSQLCmd As String
@@ -47,6 +50,7 @@ Public Class frmMain
         Catch ex As Exception
             MessageBox.Show(ex.ToString())
             MessageBox.Show("Cannot build database! Closing program down...")
+            Me.Close()
         End Try
 
         'Close the connection and reopen it pointing at the scheduling database
@@ -175,36 +179,54 @@ Public Class frmMain
         End Try
     End Sub
 
-    Private Sub DeleteDataFromTables()
+    Private Sub DeleteDatabase(ByVal strSERVERNAME As String, ByVal strDBNAME As String)
+        'This routine deletes a database completely from code. Credit to CIS 311 ch 15 notes.
+
         Dim DBConn As SqlConnection
-        Dim DBCmd As SqlCommand = New SqlCommand()
+        Dim strSQLCmd As String
+        Dim DBCommand As SqlCommand
 
-        'Use the full connection string with the Integrated Security line
-        DBConn = New SqlConnection(strCONNECTION)
-        DBConn.Open()
+        'We need to point back at the [Master] database itself
+        DBConn = New SqlConnection("Server=" & strSERVERNAME)
 
-        DBCmd.CommandText = "DELETE FROM Patients"
+        'Try to force single ownership of the database so that we have the
+        'permissions to delete it
+        strSQLCmd = "ALTER DATABASE [" & strDBNAME & "] SET " &
+                    "SINGLE_USER WITH ROLLBACK IMMEDIATE"
 
-        DBCmd.Connection = DBConn
-
-        Try
-            DBCmd.ExecuteNonQuery()
-            MessageBox.Show("Deleted from Patients Table")
-        Catch Ex As Exception
-            MessageBox.Show("Failed to delete patients table")
-        End Try
-
-        DBCmd.CommandText = "DELETE FROM Appointments"
-
-        DBCmd.Connection = DBConn
+        DBCommand = New SqlCommand(strSQLCmd, DBConn)
 
         Try
-            DBCmd.ExecuteNonQuery()
-            MessageBox.Show("Deleted from Appointments Table")
-        Catch Ex As Exception
-            MessageBox.Show("Failed to delete appointments table")
+            DBConn.Open()
+            DBCommand.ExecuteNonQuery()
+            MessageBox.Show("Database set for exclusive use", "",
+                            MessageBoxButtons.OK, MessageBoxIcon.Information)
+        Catch ex As Exception
+            MessageBox.Show(ex.ToString())
         End Try
+
+        If (DBConn.State = ConnectionState.Open) Then
+            DBConn.Close()
+        End If
+
+        'Now drop the database
+        strSQLCmd = "DROP DATABASE " & strDBNAME
+        DBCommand = New SqlCommand(strSQLCmd, DBConn)
+
+        Try
+            DBConn.Open()
+            DBCommand.ExecuteNonQuery()
+            MessageBox.Show("Database has been deleted", "", MessageBoxButtons.OK,
+                            MessageBoxIcon.Information)
+        Catch ex As Exception
+            MessageBox.Show(ex.ToString())
+        End Try
+
+        If (DBConn.State = ConnectionState.Open) Then
+            DBConn.Close()
+        End If
     End Sub
+
 
     Private Sub btnSelectFile_Click(sender As Object, e As EventArgs) Handles btnSelectFile.Click
         'Create an openfiledialog
@@ -236,11 +258,11 @@ Public Class frmMain
 
     Private Sub frmMain_FormClosing(sender As Object, e As FormClosingEventArgs) Handles MyBase.FormClosing
         'Ask the user if they want to delete the current db
-        Dim result As DialogResult = MessageBox.Show("Would you like to blast away the current data?", "Exiting", MessageBoxButtons.YesNo)
+        Dim result As DialogResult = MessageBox.Show("Would you like to blast away the current database?", "Exiting", MessageBoxButtons.YesNo)
 
         'If yes, delete it. Otherwise, keep exiting
         If result = DialogResult.Yes Then
-            DeleteDataFromTables()
+            DeleteDatabase(strSERVERNAME, strDBNAME)
         End If
     End Sub
 End Class
