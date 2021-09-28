@@ -1,4 +1,5 @@
 ﻿Imports System.Data.SqlClient
+Imports System.IO
 
 Public Class frmMain
     'Name of database
@@ -20,6 +21,107 @@ Public Class frmMain
             'Create database
             CreateDatabase(strSERVERNAME, strDBNAME, strDBPATH, strCONNECTION)
         End If
+    End Sub
+
+    Private Sub btnSelectFile_Click(sender As Object, e As EventArgs) Handles btnSelectFile.Click
+        'Get rid of error provider
+        ErrorProvider.Clear()
+
+        'Create an openfiledialog
+        Dim ofd As OpenFileDialog = New OpenFileDialog
+
+        'Filter to only allow txt files
+        ofd.Filter = "txt files (*.txt)|*.txt"
+
+        'Show to user
+        ofd.ShowDialog()
+
+        'Set name of txt file to textbox
+        txtFileName.Text = ofd.FileName
+    End Sub
+
+    Private Sub btnEnterFile_Click(sender As Object, e As EventArgs) Handles btnEnterFile.Click
+        'Get rid of error provider
+        ErrorProvider.Clear()
+
+        'Make sure the user has selected a text file before continuing
+        If txtFileName.Text = Nothing Then
+            ErrorProvider.SetError(btnEnterFile, "Please select a txt file before continuing!")
+        Else
+            'Read in file
+            Try
+                'String to hold text file
+                Dim strText As String = ""
+
+                'Read each line of text in the text file
+                For Each line As String In File.ReadAllLines(txtFileName.Text)
+                    'Read line of text and append a CR
+                    strText &= (line & vbCr)
+                Next
+
+                'Send string off to be parsed (add CR as splitter)
+                ParseTextFile(strText.Split(vbCr))
+            Catch ex As Exception
+                MessageBox.Show("Please read in a valid text file!")
+            End Try
+        End If
+    End Sub
+
+    Private Sub btnQuit_Click(sender As Object, e As EventArgs) Handles btnQuit.Click
+        'Get rid of error provider
+        ErrorProvider.Clear()
+
+        'Quit nicely
+        Me.Close()
+    End Sub
+
+    Private Sub frmMain_FormClosing(sender As Object, e As FormClosingEventArgs) Handles MyBase.FormClosing
+        'Ask the user if they want to delete the current db
+        Dim result As DialogResult = MessageBox.Show("Would you like to blast away the current database?", "Exiting", MessageBoxButtons.YesNoCancel)
+
+        'If yes, delete it. Otherwise, keep exiting
+        If result = DialogResult.Yes Then
+            DeleteDatabase(strSERVERNAME, strDBNAME)
+        ElseIf result = DialogResult.Cancel Then
+            e.Cancel = True
+        End If
+    End Sub
+
+    Private Sub ParseTextFile(strLines() As String)
+        'Create String array for pieces of data in each line of text
+        Dim strLine() As String
+        Dim strAppointments As String = ""
+        Dim strPatients As String = ""
+
+        'Cycle through each line
+        For Each line As String In strLines
+            'Split data by vbTab
+            strLine = line.Split(vbTab)
+
+            'Parse with conditional statements
+            If strLine(0) = "A" Then
+                'Appointment entry
+
+            ElseIf strLine(0) = "P" Then
+                'Patient entry
+
+                'If first time, add beginning of insert statement
+                If strPatients.Length = 0 Then
+                    strPatients = "INSERT INTO Patients VALUES "
+                End If
+
+                'Append to insert statement
+                strPatients &= "('" & strLine(1).Substring(0, strLine(1).IndexOf(" ")) & "', " &
+                    "'" & strLine(1).Substring(strLine(1).IndexOf(" ") + 1) & "', " &
+                    "'" & strLine(2) & "', " &
+                    "'" & strLine(3) & "')," & vbCrLf
+            End If
+        Next
+
+        'Chop off last comma
+        strPatients = strPatients.Substring(0, strPatients.LastIndexOf(","))
+
+
     End Sub
 
     Private Sub CreateDatabase(ByVal strSERVERNAME As String, ByVal strDBNAME As String, ByVal strDBPATH As String, ByVal strCONNECTION As String)
@@ -181,7 +283,6 @@ Public Class frmMain
 
     Private Sub DeleteDatabase(ByVal strSERVERNAME As String, ByVal strDBNAME As String)
         'This routine deletes a database completely from code. Credit to CIS 311 ch 15 notes.
-
         Dim DBConn As SqlConnection
         Dim strSQLCmd As String
         Dim DBCommand As SqlCommand
@@ -199,8 +300,6 @@ Public Class frmMain
         Try
             DBConn.Open()
             DBCommand.ExecuteNonQuery()
-            MessageBox.Show("Database set for exclusive use", "",
-                            MessageBoxButtons.OK, MessageBoxIcon.Information)
         Catch ex As Exception
             MessageBox.Show(ex.ToString())
         End Try
@@ -209,7 +308,7 @@ Public Class frmMain
             DBConn.Close()
         End If
 
-        'Now drop the database
+        'Now, drop the database
         strSQLCmd = "DROP DATABASE " & strDBNAME
         DBCommand = New SqlCommand(strSQLCmd, DBConn)
 
@@ -224,45 +323,6 @@ Public Class frmMain
 
         If (DBConn.State = ConnectionState.Open) Then
             DBConn.Close()
-        End If
-    End Sub
-
-
-    Private Sub btnSelectFile_Click(sender As Object, e As EventArgs) Handles btnSelectFile.Click
-        'Create an openfiledialog
-        Dim ofd As OpenFileDialog = New OpenFileDialog
-
-        'Filter to only allow txt files
-        ofd.Filter = "txt files (*.txt)|*.txt"
-
-        'Show to user
-        ofd.ShowDialog()
-
-        'Set name of txt file to textbox
-        txtFileName.Text = ofd.FileName
-    End Sub
-
-    Private Sub btnEnterFile_Click(sender As Object, e As EventArgs) Handles btnEnterFile.Click
-        'Make sure the user has selected a text file before continuing
-        If txtFileName.Text = Nothing Then
-            MessageBox.Show("Please select a txt file before continuing!")
-        End If
-
-
-    End Sub
-
-    Private Sub btnQuit_Click(sender As Object, e As EventArgs) Handles btnQuit.Click
-        'Quit nicely
-        Me.Close()
-    End Sub
-
-    Private Sub frmMain_FormClosing(sender As Object, e As FormClosingEventArgs) Handles MyBase.FormClosing
-        'Ask the user if they want to delete the current db
-        Dim result As DialogResult = MessageBox.Show("Would you like to blast away the current database?", "Exiting", MessageBoxButtons.YesNo)
-
-        'If yes, delete it. Otherwise, keep exiting
-        If result = DialogResult.Yes Then
-            DeleteDatabase(strSERVERNAME, strDBNAME)
         End If
     End Sub
 End Class
