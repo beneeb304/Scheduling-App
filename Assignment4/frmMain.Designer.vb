@@ -32,16 +32,17 @@ Partial Class frmMain
         Me.btnEnterFile = New System.Windows.Forms.Button()
         Me.btnSelectFile = New System.Windows.Forms.Button()
         Me.ErrorProvider = New System.Windows.Forms.ErrorProvider(Me.components)
+        Me.cmbFilter = New System.Windows.Forms.ComboBox()
         CType(Me.ErrorProvider, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.SuspendLayout()
         '
         'ListBox1
         '
         Me.ListBox1.FormattingEnabled = True
-        Me.ListBox1.Location = New System.Drawing.Point(9, 20)
+        Me.ListBox1.Location = New System.Drawing.Point(10, 20)
         Me.ListBox1.Margin = New System.Windows.Forms.Padding(2)
         Me.ListBox1.Name = "ListBox1"
-        Me.ListBox1.Size = New System.Drawing.Size(147, 264)
+        Me.ListBox1.Size = New System.Drawing.Size(147, 238)
         Me.ListBox1.TabIndex = 0
         '
         'Label1
@@ -116,11 +117,23 @@ Partial Class frmMain
         '
         Me.ErrorProvider.ContainerControl = Me
         '
+        'cmbFilter
+        '
+        Me.cmbFilter.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList
+        Me.cmbFilter.FormattingEnabled = True
+        Me.cmbFilter.Items.AddRange(New Object() {"Doctors", "Patients"})
+        Me.cmbFilter.Location = New System.Drawing.Point(10, 263)
+        Me.cmbFilter.MaxDropDownItems = 2
+        Me.cmbFilter.Name = "cmbFilter"
+        Me.cmbFilter.Size = New System.Drawing.Size(147, 21)
+        Me.cmbFilter.TabIndex = 12
+        '
         'frmMain
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 13.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
         Me.ClientSize = New System.Drawing.Size(600, 366)
+        Me.Controls.Add(Me.cmbFilter)
         Me.Controls.Add(Me.btnQuit)
         Me.Controls.Add(Me.txtFileName)
         Me.Controls.Add(Me.btnEnterFile)
@@ -147,4 +160,5 @@ Partial Class frmMain
     Friend WithEvents btnEnterFile As Button
     Friend WithEvents btnSelectFile As Button
     Friend WithEvents ErrorProvider As ErrorProvider
+    Friend WithEvents cmbFilter As ComboBox
 End Class

@@ -1,2 +1,4 @@
-1. insert statements for patients from file
-- parse out the 'p' and run statements
+1. Execute SQL statement for Patients table
+2. Condense SQL execution into 1 method if possible
+3. Create Logic for Appointments table (pretty difficult)
+4. GUI commands

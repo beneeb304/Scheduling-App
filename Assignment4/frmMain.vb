@@ -99,12 +99,9 @@ Public Class frmMain
             strLine = line.Split(vbTab)
 
             'Parse with conditional statements
-            If strLine(0) = "A" Then
-                'Appointment entry
+            If strLine(0) = "A" Then        'Appointment entry
 
-            ElseIf strLine(0) = "P" Then
-                'Patient entry
-
+            ElseIf strLine(0) = "P" Then    'Patient entry
                 'If first time, add beginning of insert statement
                 If strPatients.Length = 0 Then
                     strPatients = "INSERT INTO Patients VALUES "
@@ -120,7 +117,6 @@ Public Class frmMain
 
         'Chop off last comma
         strPatients = strPatients.Substring(0, strPatients.LastIndexOf(","))
-
 
     End Sub
 
