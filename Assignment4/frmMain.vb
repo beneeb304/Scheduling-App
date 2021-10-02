@@ -20,9 +20,6 @@ Public Class frmMain
     Private Sub frmMain_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         'If the database doesn't exist, create it
         If Not IO.File.Exists(strDBPATH) Then
-            'Connect to SQL Server instance
-            ConnecttoSQL()
-
             'Create database, build tables, and insert initial data
             CreateDatabase()
         End If
@@ -70,6 +67,9 @@ Public Class frmMain
                 MessageBox.Show("Please read in a valid text file!")
             End Try
         End If
+
+        'Empty textbox
+        txtFileName.Text = ""
     End Sub
 
     Private Sub btnQuit_Click(sender As Object, e As EventArgs) Handles btnQuit.Click
@@ -104,12 +104,15 @@ Public Class frmMain
             strLine = line.Split(vbTab)
 
             'Parse with conditional statements
-            If strLine(0) = "A" Then        'Appointment entry
+            If strLine(0) = "A" Then
+                'Appointment entry
 
-            ElseIf strLine(0) = "P" Then    'Patient entry
+            ElseIf strLine(0) = "P" Then
+                'Patient entry
+
                 'If first time, add beginning of insert statement
                 If strPatients.Length = 0 Then
-                    strPatients = "INSERT INTO Patients VALUES "
+                    strPatients = "INSERT INTO dbo.Patients VALUES "
                 End If
 
                 'Append to insert statement
@@ -123,8 +126,11 @@ Public Class frmMain
         'Chop off last comma
         strPatients = strPatients.Substring(0, strPatients.LastIndexOf(","))
 
+        'Connect to SQL Server instance
+        ConnectToSQL(False)
 
-
+        'Execute SQL command
+        ExecuteSQL(strPatients)
     End Sub
 
     Private Sub ExecuteSQL(strSQL As String)
@@ -141,9 +147,14 @@ Public Class frmMain
         End Try
     End Sub
 
-    Private Sub ConnectToSQL()
-        'Initial connection
-        DBConn = New SqlConnection("Server=" & strSERVERNAME)
+    Private Sub ConnectToSQL(blnInitial As Boolean)
+        If blnInitial Then
+            'Initial connection
+            DBConn = New SqlConnection("Server=" & strSERVERNAME)
+        Else
+            'Use the full connection string with the Integrated Security line
+            DBConn = New SqlConnection(strCONNECTION)
+        End If
 
         'Try to open the SQL Server connection
         Try
@@ -164,6 +175,9 @@ Public Class frmMain
             "(NAME = '" & strDBNAME & "', " &
             "FILENAME = '" & strDBPATH & "')"
 
+        'Connect to SQL Server instance
+        ConnectToSQL(True)
+
         'Execute SQL command
         ExecuteSQL(strSQLCommand)
 
@@ -172,9 +186,8 @@ Public Class frmMain
             DBConn.Close()
         End If
 
-        'Use the full connection string with the Integrated Security line
-        DBConn = New SqlConnection(strCONNECTION)
-        DBConn.Open()
+        'Connect to SQL with security
+        ConnectToSQL(False)
 
         'Build database tables
         BuildTables()
@@ -273,8 +286,8 @@ Public Class frmMain
         'String to hold SQL command text
         Dim strSQLCommand As String
 
-        'We need to point back at the [Master] database itself
-        ConnectToSQL()
+        'Connect to SQL Server instance
+        ConnectToSQL(True)
 
         'Try to force single ownership of the database so that we have the permissions to delete it
         strSQLCommand = "ALTER DATABASE [" & strDBNAME & "] SET " &

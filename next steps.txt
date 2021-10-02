@@ -1,4 +1,2 @@
-1. Execute SQL statement for Patients table
-2. Condense SQL execution into 1 method if possible
-3. Create Logic for Appointments table (pretty difficult)
-4. GUI commands
+1. Create Logic for Appointments table (pretty difficult)
+2. GUI commands
