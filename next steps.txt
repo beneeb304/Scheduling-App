@@ -1,6 +1,23 @@
 1. Create Logic for Appointments table (pretty difficult)
 2. GUI commands
-
+	- make button to drop appointment
+	- make button to change appointment
 
 ?. Add loading bar on exit if deleting db?
 ?. Control focus
+
+
+
+
+
+
+
+
+
+
+2. 
+	- Check if patient exists
+		- Yes, continue
+		- No, collect info
+			- AddPatient()
+	- 

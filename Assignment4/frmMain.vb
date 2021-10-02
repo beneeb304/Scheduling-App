@@ -26,9 +26,6 @@ Public Class frmMain
     End Sub
 
     Private Sub btnSelectFile_Click(sender As Object, e As EventArgs) Handles btnSelectFile.Click
-        'Get rid of error provider
-        ErrorProvider.Clear()
-
         'Create an openfiledialog
         Dim ofd As OpenFileDialog = New OpenFileDialog
 
@@ -43,30 +40,22 @@ Public Class frmMain
     End Sub
 
     Private Sub btnEnterFile_Click(sender As Object, e As EventArgs) Handles btnEnterFile.Click
-        'Get rid of error provider
-        ErrorProvider.Clear()
+        'Read in file
+        Try
+            'String to hold text file
+            Dim strText As String = ""
 
-        'Make sure the user has selected a text file before continuing
-        If txtFileName.Text = Nothing Then
-            ErrorProvider.SetError(btnEnterFile, "Please select a txt file before continuing!")
-        Else
-            'Read in file
-            Try
-                'String to hold text file
-                Dim strText As String = ""
+            'Read each line of text in the text file
+            For Each line As String In File.ReadAllLines(txtFileName.Text)
+                'Read line of text and append a CR
+                strText &= (line & vbCr)
+            Next
 
-                'Read each line of text in the text file
-                For Each line As String In File.ReadAllLines(txtFileName.Text)
-                    'Read line of text and append a CR
-                    strText &= (line & vbCr)
-                Next
-
-                'Send string off to be parsed (add CR as splitter)
-                ParseTextFile(strText.Split(vbCr))
-            Catch ex As Exception
-                MessageBox.Show("Please read in a valid text file!")
-            End Try
-        End If
+            'Send string off to be parsed (add CR as splitter)
+            ParseTextFile(strText.Split(vbCr))
+        Catch ex As Exception
+            MessageBox.Show("Please read in a valid text file!")
+        End Try
 
         'Empty controls so user is forced to realize new data (if applicable)
         txtFileName.Text = ""
@@ -76,9 +65,6 @@ Public Class frmMain
     End Sub
 
     Private Sub btnQuit_Click(sender As Object, e As EventArgs) Handles btnQuit.Click
-        'Get rid of error provider
-        ErrorProvider.Clear()
-
         'Quit nicely
         Me.Close()
     End Sub
@@ -98,21 +84,17 @@ Public Class frmMain
     Private Sub ParseTextFile(strLines() As String)
         'Create String array for pieces of data in each line of text
         Dim strLine() As String
-        Dim strAppointments As String = ""
         Dim strPatients As String = ""
+        Dim strAppointments As String = ""
+        Dim lstPhone As List(Of String) = New List(Of String)
 
         'Cycle through each line
         For Each line As String In strLines
             'Split data by vbTab
             strLine = line.Split(vbTab)
 
-            'Parse with conditional statements
-            If strLine(0) = "A" Then
-                'Appointment entry
-
-            ElseIf strLine(0) = "P" Then
-                'Patient entry
-
+            'Pick out patients first
+            If strLine(0) = "P" Then
                 'If first time, add beginning of insert statement
                 If strPatients.Length = 0 Then
                     strPatients = "INSERT INTO Patients VALUES "
@@ -134,6 +116,62 @@ Public Class frmMain
 
         'Execute SQL command
         ExecuteSQLNonQ(strPatients)
+
+        For Each line As String In strLines
+            'Split data by vbTab
+            strLine = line.Split(vbTab)
+
+            'Pick out appointments second
+            If strLine(0) = "A" Then
+                'If first time, get list of phone numbers
+                If strAppointments.Length = 0 Then
+                    Dim dataReader = ExecuteSQLReader("SELECT Phone FROM Patients")
+
+                    'While there's data, read it
+                    While dataReader.Read()
+                        'Add phone numbers to list
+                        lstPhone.Add(dataReader("Phone"))
+                    End While
+                End If
+
+                'Check of patient doesn't exists yet
+                If lstPhone.Contains(strLine(1)) = False Then
+                    'If not, add them
+                    AddPatient(strLine(1))
+                End If
+
+
+
+
+
+            End If
+        Next
+
+        'Disconnect from the database
+        DisconnectFromSQL()
+    End Sub
+
+    Private Sub AddPatient(strPhone As String)
+        Dim strData(2) As String
+
+        'Get patient's first name
+        strData(0) = InputBox("Please enter the patient's first name.", "New patient! Please fill out their information.")
+
+        'Get patient's last name
+        strData(1) = InputBox("Please enter the patient's last name.", "New patient! Please fill out their information.")
+
+        'Get patient's insurance provider
+        strData(2) = InputBox("Please enter the patient's insurance provider.", "New patient! Please fill out their information.")
+
+        'Make SQL command
+        Dim strSQLCommand As String = "INSERT INTO Patients VALUES " &
+            "('" & strData(0) & "', " &
+            "'" & strData(1) & "', " &
+            "'" & strPhone & "', " &
+            "'" & strData(2) & "')"
+
+        'Execute SQL command
+        ExecuteSQLNonQ(strSQLCommand)
     End Sub
 
     Private Sub ExecuteSQLNonQ(strSQL As String)
@@ -253,7 +291,7 @@ Public Class frmMain
              (TUID int IDENTITY(1,1) PRIMARY KEY,
              FirstName varchar(50) NOT NULL,
              LastName varchar(50) NOT NULL,
-             Phone varchar(8) NOT NULL,
+             Phone varchar(8) NOT NULL UNIQUE,
              Insurance varchar(20) NOT NULL)"
 
         'Execute SQL command
@@ -346,14 +384,14 @@ Public Class frmMain
         ConnectToSQL(False)
 
         If cmbFilter.SelectedItem = "Patients" Then
-            strSQLCommand = "SELECT TUID, FirstName, LastName FROM PATIENTS"
+            strSQLCommand = "SELECT Phone, FirstName, LastName FROM Patients"
 
             Dim dataReader As SqlDataReader = ExecuteSQLReader(strSQLCommand)
 
             'While there's data, read it
             While dataReader.Read()
                 'Add to listbox
-                lstSelect.Items.Add(dataReader("TUID") & " " & dataReader("FirstName") & " " & dataReader("LastName"))
+                lstSelect.Items.Add(dataReader("Phone") & " - " & dataReader("FirstName") & " " & dataReader("LastName"))
             End While
 
             'Tidy up
@@ -362,5 +400,12 @@ Public Class frmMain
         ElseIf cmbFilter.SelectedItem = "Doctors" Then
 
         End If
+    End Sub
+
+    Private Sub btnAddPatient_Click(sender As Object, e As EventArgs) Handles btnAddPatient.Click
+        'Get patient's insurance provider
+        Dim strPhone As String = InputBox("Please enter the patient's phone number.", "New patient! Please fill out their information.")
+
+        AddPatient(strPhone)
     End Sub
 End Class
