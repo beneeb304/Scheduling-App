@@ -23,9 +23,9 @@ Partial Class frmMain
     <System.Diagnostics.DebuggerStepThrough()> _
     Private Sub InitializeComponent()
         Me.components = New System.ComponentModel.Container()
-        Me.ListBox1 = New System.Windows.Forms.ListBox()
+        Me.lstSelect = New System.Windows.Forms.ListBox()
         Me.Label1 = New System.Windows.Forms.Label()
-        Me.ListBox2 = New System.Windows.Forms.ListBox()
+        Me.lstDisplay = New System.Windows.Forms.ListBox()
         Me.Label2 = New System.Windows.Forms.Label()
         Me.btnQuit = New System.Windows.Forms.Button()
         Me.txtFileName = New System.Windows.Forms.TextBox()
@@ -36,14 +36,14 @@ Partial Class frmMain
         CType(Me.ErrorProvider, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.SuspendLayout()
         '
-        'ListBox1
+        'lstSelect
         '
-        Me.ListBox1.FormattingEnabled = True
-        Me.ListBox1.Location = New System.Drawing.Point(10, 20)
-        Me.ListBox1.Margin = New System.Windows.Forms.Padding(2)
-        Me.ListBox1.Name = "ListBox1"
-        Me.ListBox1.Size = New System.Drawing.Size(147, 238)
-        Me.ListBox1.TabIndex = 0
+        Me.lstSelect.FormattingEnabled = True
+        Me.lstSelect.Location = New System.Drawing.Point(10, 20)
+        Me.lstSelect.Margin = New System.Windows.Forms.Padding(2)
+        Me.lstSelect.Name = "lstSelect"
+        Me.lstSelect.Size = New System.Drawing.Size(147, 238)
+        Me.lstSelect.TabIndex = 0
         '
         'Label1
         '
@@ -55,14 +55,14 @@ Partial Class frmMain
         Me.Label1.TabIndex = 1
         Me.Label1.Text = "Selection Box"
         '
-        'ListBox2
+        'lstDisplay
         '
-        Me.ListBox2.FormattingEnabled = True
-        Me.ListBox2.Location = New System.Drawing.Point(169, 20)
-        Me.ListBox2.Margin = New System.Windows.Forms.Padding(2)
-        Me.ListBox2.Name = "ListBox2"
-        Me.ListBox2.Size = New System.Drawing.Size(420, 264)
-        Me.ListBox2.TabIndex = 2
+        Me.lstDisplay.FormattingEnabled = True
+        Me.lstDisplay.Location = New System.Drawing.Point(169, 20)
+        Me.lstDisplay.Margin = New System.Windows.Forms.Padding(2)
+        Me.lstDisplay.Name = "lstDisplay"
+        Me.lstDisplay.Size = New System.Drawing.Size(420, 264)
+        Me.lstDisplay.TabIndex = 2
         '
         'Label2
         '
@@ -70,9 +70,9 @@ Partial Class frmMain
         Me.Label2.Location = New System.Drawing.Point(166, 5)
         Me.Label2.Margin = New System.Windows.Forms.Padding(2, 0, 2, 0)
         Me.Label2.Name = "Label2"
-        Me.Label2.Size = New System.Drawing.Size(60, 13)
+        Me.Label2.Size = New System.Drawing.Size(62, 13)
         Me.Label2.TabIndex = 3
-        Me.Label2.Text = "Output Box"
+        Me.Label2.Text = "Display Box"
         '
         'btnQuit
         '
@@ -95,6 +95,7 @@ Partial Class frmMain
         '
         'btnEnterFile
         '
+        Me.btnEnterFile.Enabled = False
         Me.btnEnterFile.Location = New System.Drawing.Point(121, 303)
         Me.btnEnterFile.Margin = New System.Windows.Forms.Padding(2)
         Me.btnEnterFile.Name = "btnEnterFile"
@@ -139,9 +140,9 @@ Partial Class frmMain
         Me.Controls.Add(Me.btnEnterFile)
         Me.Controls.Add(Me.btnSelectFile)
         Me.Controls.Add(Me.Label2)
-        Me.Controls.Add(Me.ListBox2)
+        Me.Controls.Add(Me.lstDisplay)
         Me.Controls.Add(Me.Label1)
-        Me.Controls.Add(Me.ListBox1)
+        Me.Controls.Add(Me.lstSelect)
         Me.Margin = New System.Windows.Forms.Padding(2)
         Me.Name = "frmMain"
         Me.Text = "Scheduler"
@@ -151,9 +152,9 @@ Partial Class frmMain
 
     End Sub
 
-    Friend WithEvents ListBox1 As ListBox
+    Friend WithEvents lstSelect As ListBox
     Friend WithEvents Label1 As Label
-    Friend WithEvents ListBox2 As ListBox
+    Friend WithEvents lstDisplay As ListBox
     Friend WithEvents Label2 As Label
     Friend WithEvents btnQuit As Button
     Friend WithEvents txtFileName As TextBox

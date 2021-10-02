@@ -1,2 +1,6 @@
 1. Create Logic for Appointments table (pretty difficult)
 2. GUI commands
+
+
+?. Add loading bar on exit if deleting db?
+?. Control focus

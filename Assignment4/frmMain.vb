@@ -68,8 +68,11 @@ Public Class frmMain
             End Try
         End If
 
-        'Empty textbox
+        'Empty controls so user is forced to realize new data (if applicable)
         txtFileName.Text = ""
+        cmbFilter.SelectedItem = Nothing
+        lstSelect.Items.Clear()
+        lstDisplay.Items.Clear()
     End Sub
 
     Private Sub btnQuit_Click(sender As Object, e As EventArgs) Handles btnQuit.Click
@@ -112,7 +115,7 @@ Public Class frmMain
 
                 'If first time, add beginning of insert statement
                 If strPatients.Length = 0 Then
-                    strPatients = "INSERT INTO dbo.Patients VALUES "
+                    strPatients = "INSERT INTO Patients VALUES "
                 End If
 
                 'Append to insert statement
@@ -130,10 +133,10 @@ Public Class frmMain
         ConnectToSQL(False)
 
         'Execute SQL command
-        ExecuteSQL(strPatients)
+        ExecuteSQLNonQ(strPatients)
     End Sub
 
-    Private Sub ExecuteSQL(strSQL As String)
+    Private Sub ExecuteSQLNonQ(strSQL As String)
         'Build a SQL Server database from scratch
         Dim DBCmd As SqlCommand = New SqlCommand()
 
@@ -146,6 +149,23 @@ Public Class frmMain
             MessageBox.Show(ex.ToString(), "Error executing SQL statement.")
         End Try
     End Sub
+
+    Private Function ExecuteSQLReader(strSQL As String) As SqlDataReader
+        'Build a SQL Server database from scratch
+        Dim DBCmd As SqlCommand = New SqlCommand()
+        Dim dataReader As SqlDataReader = Nothing
+
+        DBCmd.CommandText = strSQL
+        DBCmd.Connection = DBConn
+
+        Try
+            dataReader = DBCmd.ExecuteReader()
+        Catch ex As Exception
+            MessageBox.Show(ex.ToString(), "Error executing SQL statement.")
+        End Try
+
+        Return dataReader
+    End Function
 
     Private Sub ConnectToSQL(blnInitial As Boolean)
         If blnInitial Then
@@ -165,6 +185,12 @@ Public Class frmMain
         End Try
     End Sub
 
+    Private Sub DisconnectFromSQL()
+        If (DBConn.State = ConnectionState.Open) Then
+            DBConn.Close()
+        End If
+    End Sub
+
     Private Sub CreateDatabase()
 
         'String to hold SQL command text
@@ -179,12 +205,10 @@ Public Class frmMain
         ConnectToSQL(True)
 
         'Execute SQL command
-        ExecuteSQL(strSQLCommand)
+        ExecuteSQLNonQ(strSQLCommand)
 
         'Close the connection and reopen it pointing at the scheduling database
-        If (DBConn.State = ConnectionState.Open) Then
-            DBConn.Close()
-        End If
+        DisconnectFromSQL()
 
         'Connect to SQL with security
         ConnectToSQL(False)
@@ -196,9 +220,7 @@ Public Class frmMain
         InsertInitialData()
 
         'We can check to see if we're open before trying to issue a connection close
-        If DBConn.State = ConnectionState.Open Then
-            DBConn.Close()
-        End If
+        DisconnectFromSQL()
     End Sub
 
     Private Sub BuildTables()
@@ -212,7 +234,7 @@ Public Class frmMain
             LastName varchar(50) NOT NULL)"
 
         'Execute SQL command
-        ExecuteSQL(strSQLCommand)
+        ExecuteSQLNonQ(strSQLCommand)
 
         'Build the Availability Table
         strSQLCommand = "CREATE TABLE Availability
@@ -224,7 +246,7 @@ Public Class frmMain
             PatientCount int NOT NULL)"
 
         'Execute SQL command
-        ExecuteSQL(strSQLCommand)
+        ExecuteSQLNonQ(strSQLCommand)
 
         'Build the Patients Table
         strSQLCommand = "CREATE TABLE Patients
@@ -235,7 +257,7 @@ Public Class frmMain
              Insurance varchar(20) NOT NULL)"
 
         'Execute SQL command
-        ExecuteSQL(strSQLCommand)
+        ExecuteSQLNonQ(strSQLCommand)
 
         'Build the Appointments Table
         strSQLCommand = "CREATE TABLE Appointments
@@ -248,7 +270,7 @@ Public Class frmMain
             EndTime Time(0) NOT NULL)"
 
         'Execute SQL command
-        ExecuteSQL(strSQLCommand)
+        ExecuteSQLNonQ(strSQLCommand)
     End Sub
 
     Private Sub InsertInitialData()
@@ -262,7 +284,7 @@ Public Class frmMain
             ('Emmett', 'Brown')"
 
         'Execute SQL command
-        ExecuteSQL(strSQLCommand)
+        ExecuteSQLNonQ(strSQLCommand)
 
         strSQLCommand = "INSERT INTO Availability VALUES 
             (1, 'M', '10:00', '14:00', 7), 
@@ -277,7 +299,7 @@ Public Class frmMain
             (3, 'F', '11:00', '16:00', 9)"
 
         'Execute SQL command
-        ExecuteSQL(strSQLCommand)
+        ExecuteSQLNonQ(strSQLCommand)
     End Sub
 
     Private Sub DeleteDatabase(strSERVERNAME As String, strDBNAME As String)
@@ -294,16 +316,51 @@ Public Class frmMain
             "SINGLE_USER WITH ROLLBACK IMMEDIATE"
 
         'Execute SQL command
-        ExecuteSQL(strSQLCommand)
+        ExecuteSQLNonQ(strSQLCommand)
 
         'Now, drop the database
         strSQLCommand = "DROP DATABASE " & strDBNAME
 
         'Execute SQL command
-        ExecuteSQL(strSQLCommand)
+        ExecuteSQLNonQ(strSQLCommand)
 
-        If (DBConn.State = ConnectionState.Open) Then
-            DBConn.Close()
+        DisconnectFromSQL()
+    End Sub
+
+    Private Sub txtFileName_TextChanged(sender As Object, e As EventArgs) Handles txtFileName.TextChanged
+        If txtFileName.Text.Length > 0 Then
+            btnEnterFile.Enabled = True
+        Else
+            btnEnterFile.Enabled = False
+        End If
+    End Sub
+
+    Private Sub cmbFilter_SelectedIndexChanged(sender As Object, e As EventArgs) Handles cmbFilter.SelectedIndexChanged
+        'String to hold SQL command text
+        Dim strSQLCommand As String
+
+        'Clear listboxes
+        lstSelect.Items.Clear()
+        lstDisplay.Items.Clear()
+
+        ConnectToSQL(False)
+
+        If cmbFilter.SelectedItem = "Patients" Then
+            strSQLCommand = "SELECT TUID, FirstName, LastName FROM PATIENTS"
+
+            Dim dataReader As SqlDataReader = ExecuteSQLReader(strSQLCommand)
+
+            'While there's data, read it
+            While dataReader.Read()
+                'Add to listbox
+                lstSelect.Items.Add(dataReader("TUID") & " " & dataReader("FirstName") & " " & dataReader("LastName"))
+            End While
+
+            'Tidy up
+            dataReader.Close()
+            DisconnectFromSQL()
+        ElseIf cmbFilter.SelectedItem = "Doctors" Then
+
         End If
     End Sub
 End Class
