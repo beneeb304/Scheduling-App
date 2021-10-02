@@ -15,11 +15,16 @@ Public Class frmMain
     Dim strCONNECTION As String = "SERVER=" & strSERVERNAME & ";DATABASE=" &
                      strDBNAME & ";Integrated Security=SSPI;AttachDbFileName=" & strDBPATH
 
+    Dim DBConn As SqlConnection
+
     Private Sub frmMain_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         'If the database doesn't exist, create it
         If Not IO.File.Exists(strDBPATH) Then
-            'Create database
-            CreateDatabase(strSERVERNAME, strDBNAME, strDBPATH, strCONNECTION)
+            'Connect to SQL Server instance
+            ConnecttoSQL()
+
+            'Create database, build tables, and insert initial data
+            CreateDatabase()
         End If
     End Sub
 
@@ -118,38 +123,49 @@ Public Class frmMain
         'Chop off last comma
         strPatients = strPatients.Substring(0, strPatients.LastIndexOf(","))
 
+
+
     End Sub
 
-    Private Sub CreateDatabase(ByVal strSERVERNAME As String, ByVal strDBNAME As String, ByVal strDBPATH As String, ByVal strCONNECTION As String)
-
-        'Credit to CIS 311 ch 15 notes.
-
+    Private Sub ExecuteSQL(strSQL As String)
         'Build a SQL Server database from scratch
-        Dim DBConn As SqlConnection
-        Dim strSQLCmd As String
         Dim DBCmd As SqlCommand = New SqlCommand()
 
-        'Point at the server
-        DBConn = New SqlConnection("Server=" & strSERVERNAME)
-
-        'Build the database
-        strSQLCmd = "CREATE DATABASE " & strDBNAME & " On " &
-                        "(NAME = '" & strDBNAME & "', " &
-                        "FILENAME = '" & strDBPATH & "')"
-
-        DBCmd.CommandText = strSQLCmd
+        DBCmd.CommandText = strSQL
         DBCmd.Connection = DBConn
 
         Try
-            'Open the connection and try running the command
-            DBConn.Open()
             DBCmd.ExecuteNonQuery()
-            MessageBox.Show("Database was successfully created", "", MessageBoxButtons.OK, MessageBoxIcon.Information)
         Catch ex As Exception
-            MessageBox.Show(ex.ToString())
-            MessageBox.Show("Cannot build database! Closing program down...")
+            MessageBox.Show(ex.ToString(), "Error executing SQL statement.")
+        End Try
+    End Sub
+
+    Private Sub ConnectToSQL()
+        'Initial connection
+        DBConn = New SqlConnection("Server=" & strSERVERNAME)
+
+        'Try to open the SQL Server connection
+        Try
+            DBConn.Open()
+        Catch ex As Exception
+            MessageBox.Show(ex.ToString(), "Failed to connect to SQL Server... Closing down!")
             Me.Close()
         End Try
+    End Sub
+
+    Private Sub CreateDatabase()
+
+        'String to hold SQL command text
+        Dim strSQLCommand As String
+
+        'Build the database command
+        strSQLCommand = "CREATE DATABASE " & strDBNAME & " On " &
+            "(NAME = '" & strDBNAME & "', " &
+            "FILENAME = '" & strDBPATH & "')"
+
+        'Execute SQL command
+        ExecuteSQL(strSQLCommand)
 
         'Close the connection and reopen it pointing at the scheduling database
         If (DBConn.State = ConnectionState.Open) Then
@@ -160,10 +176,11 @@ Public Class frmMain
         DBConn = New SqlConnection(strCONNECTION)
         DBConn.Open()
 
-        BuildTables(DBConn, DBCmd)
+        'Build database tables
+        BuildTables()
 
         'Insert the initial datasets
-        InsertInitialData(DBConn, DBCmd)
+        InsertInitialData()
 
         'We can check to see if we're open before trying to issue a connection close
         If DBConn.State = ConnectionState.Open Then
@@ -171,151 +188,106 @@ Public Class frmMain
         End If
     End Sub
 
-    Private Sub BuildTables(DBConn As SqlConnection, DBCmd As SqlCommand)
+    Private Sub BuildTables()
+        'String to hold SQL command text
+        Dim strSQLCommand As String
+
         'Build the Doctors Table
-        DBCmd.CommandText = "CREATE TABLE Doctors 
-                            (TUID int IDENTITY(1,1) PRIMARY KEY,
-                            FirstName varchar(50) NOT NULL,
-                            LastName varchar(50) NOT NULL)"
+        strSQLCommand = "CREATE TABLE Doctors
+            (TUID int IDENTITY(1,1) PRIMARY KEY,
+            FirstName varchar(50) NOT NULL,
+            LastName varchar(50) NOT NULL)"
 
-        DBCmd.Connection = DBConn
-
-        Try
-            DBCmd.ExecuteNonQuery()
-            MessageBox.Show("Created Doctors Table")
-        Catch Ex As Exception
-            MessageBox.Show("Doctors Table Already Exists")
-        End Try
+        'Execute SQL command
+        ExecuteSQL(strSQLCommand)
 
         'Build the Availability Table
-        DBCmd.CommandText = "CREATE TABLE Availability
-                            (TUID int IDENTITY(1,1) PRIMARY KEY,
-                            DoctorTUID int FOREIGN KEY REFERENCES Doctors(TUID) NOT NULL,
-                            Day char(1) NOT NULL,
-                            StartTime Time(0) NOT NULL,
-                            EndTime Time(0) NOT NULL,
-                            PatientCount int NOT NULL)"
+        strSQLCommand = "CREATE TABLE Availability
+            (TUID int IDENTITY(1,1) PRIMARY KEY,
+            DoctorTUID int FOREIGN KEY REFERENCES Doctors(TUID) NOT NULL,
+            Day char(1) NOT NULL,
+            StartTime Time(0) NOT NULL,
+            EndTime Time(0) NOT NULL,
+            PatientCount int NOT NULL)"
 
-        DBCmd.Connection = DBConn
-
-        Try
-            DBCmd.ExecuteNonQuery()
-            MessageBox.Show("Created Availability Table")
-        Catch Ex As Exception
-            MessageBox.Show("Availability Table Already Exists")
-        End Try
+        'Execute SQL command
+        ExecuteSQL(strSQLCommand)
 
         'Build the Patients Table
-        DBCmd.CommandText = "CREATE TABLE Patients
-                            (TUID int IDENTITY(1,1) PRIMARY KEY,
-                            FirstName varchar(50) NOT NULL,
-                            LastName varchar(50) NOT NULL,
-                            Phone varchar(8) NOT NULL,
-                            Insurance varchar(20) NOT NULL)"
+        strSQLCommand = "CREATE TABLE Patients
+             (TUID int IDENTITY(1,1) PRIMARY KEY,
+             FirstName varchar(50) NOT NULL,
+             LastName varchar(50) NOT NULL,
+             Phone varchar(8) NOT NULL,
+             Insurance varchar(20) NOT NULL)"
 
-        DBCmd.Connection = DBConn
-
-        Try
-            DBCmd.ExecuteNonQuery()
-            MessageBox.Show("Created Patients Table")
-        Catch Ex As Exception
-            MessageBox.Show("Patients Table Already Exists")
-        End Try
+        'Execute SQL command
+        ExecuteSQL(strSQLCommand)
 
         'Build the Appointments Table
-        DBCmd.CommandText = "CREATE TABLE Appointments
-                            (TUID int IDENTITY(1,1) PRIMARY KEY,
-                            PatientTUID int FOREIGN KEY REFERENCES Patients(TUID) NOT NULL,
-                            DoctorTUID int FOREIGN KEY REFERENCES Doctors(TUID) NOT NULL,
-                            Day Date NOT NULL,
-                            AppointmentLength int NOT NULL,
-                            StartTime Time(0) NOT NULL,
-                            EndTime Time(0) NOT NULL)"
+        strSQLCommand = "CREATE TABLE Appointments
+            (TUID int IDENTITY(1,1) PRIMARY KEY,
+            PatientTUID int FOREIGN KEY REFERENCES Patients(TUID) NOT NULL,
+            DoctorTUID int FOREIGN KEY REFERENCES Doctors(TUID) NOT NULL,
+            Day Date NOT NULL,
+            AppointmentLength int NOT NULL,
+            StartTime Time(0) NOT NULL,
+            EndTime Time(0) NOT NULL)"
 
-        DBCmd.Connection = DBConn
-
-        Try
-            DBCmd.ExecuteNonQuery()
-            MessageBox.Show("Created AppointmentsTable")
-        Catch Ex As Exception
-            MessageBox.Show("Appointments Table Already Exists")
-        End Try
+        'Execute SQL command
+        ExecuteSQL(strSQLCommand)
     End Sub
 
-    Private Sub InsertInitialData(DBConn As SqlConnection, DBCmd As SqlCommand)
-        DBCmd.CommandText = "INSERT INTO Doctors VALUES 
-                            ('Ray', 'Strantz'),
-                            ('Henry', 'Jones, Jr.'),
-                            ('Emmett', 'Brown')"
+    Private Sub InsertInitialData()
 
-        DBCmd.Connection = DBConn
+        'String to hold SQL command text
+        Dim strSQLCommand As String
 
-        Try
-            DBCmd.ExecuteNonQuery()
-            MessageBox.Show("Added to Doctors Table")
-        Catch Ex As Exception
-            MessageBox.Show("Error adding to Doctors Table")
-        End Try
+        strSQLCommand = "INSERT INTO Doctors VALUES 
+            ('Ray', 'Strantz'),
+            ('Henry', 'Jones, Jr.'),
+            ('Emmett', 'Brown')"
 
-        DBCmd.CommandText = "INSERT INTO Availability VALUES 
-                            (1, 'M', '10:00', '14:00', 7), 
-                            (1, 'W', '10:00', '14:00', 7),
-                            (1, 'F', '10:00', '14:00', 7),
-                            (2, 'M', '8:00', '13:00', 8),
-                            (2, 'W', '8:00', '13:00', 8),
-                            (2, 'R', '8:00', '13:00', 8),
-                            (3, 'M', '11:00', '16:00', 9),
-                            (3, 'T', '11:00', '16:00', 9),
-                            (3, 'R', '11:00', '16:00', 9),
-                            (3, 'F', '11:00', '16:00', 9)"
+        'Execute SQL command
+        ExecuteSQL(strSQLCommand)
 
-        Try
-            DBCmd.ExecuteNonQuery()
-            MessageBox.Show("Added to Availability Table")
-        Catch Ex As Exception
-            MessageBox.Show("Error adding to Availability Table")
-        End Try
+        strSQLCommand = "INSERT INTO Availability VALUES 
+            (1, 'M', '10:00', '14:00', 7), 
+            (1, 'W', '10:00', '14:00', 7),
+            (1, 'F', '10:00', '14:00', 7),
+            (2, 'M', '8:00', '13:00', 8),
+            (2, 'W', '8:00', '13:00', 8),
+            (2, 'R', '8:00', '13:00', 8),
+            (3, 'M', '11:00', '16:00', 9),
+            (3, 'T', '11:00', '16:00', 9),
+            (3, 'R', '11:00', '16:00', 9),
+            (3, 'F', '11:00', '16:00', 9)"
+
+        'Execute SQL command
+        ExecuteSQL(strSQLCommand)
     End Sub
 
-    Private Sub DeleteDatabase(ByVal strSERVERNAME As String, ByVal strDBNAME As String)
+    Private Sub DeleteDatabase(strSERVERNAME As String, strDBNAME As String)
         'This routine deletes a database completely from code. Credit to CIS 311 ch 15 notes.
-        Dim DBConn As SqlConnection
-        Dim strSQLCmd As String
-        Dim DBCommand As SqlCommand
+
+        'String to hold SQL command text
+        Dim strSQLCommand As String
 
         'We need to point back at the [Master] database itself
-        DBConn = New SqlConnection("Server=" & strSERVERNAME)
+        ConnectToSQL()
 
-        'Try to force single ownership of the database so that we have the
-        'permissions to delete it
-        strSQLCmd = "ALTER DATABASE [" & strDBNAME & "] SET " &
-                    "SINGLE_USER WITH ROLLBACK IMMEDIATE"
+        'Try to force single ownership of the database so that we have the permissions to delete it
+        strSQLCommand = "ALTER DATABASE [" & strDBNAME & "] SET " &
+            "SINGLE_USER WITH ROLLBACK IMMEDIATE"
 
-        DBCommand = New SqlCommand(strSQLCmd, DBConn)
-
-        Try
-            DBConn.Open()
-            DBCommand.ExecuteNonQuery()
-        Catch ex As Exception
-            MessageBox.Show(ex.ToString())
-        End Try
-
-        If (DBConn.State = ConnectionState.Open) Then
-            DBConn.Close()
-        End If
+        'Execute SQL command
+        ExecuteSQL(strSQLCommand)
 
         'Now, drop the database
-        strSQLCmd = "DROP DATABASE " & strDBNAME
-        DBCommand = New SqlCommand(strSQLCmd, DBConn)
+        strSQLCommand = "DROP DATABASE " & strDBNAME
 
-        Try
-            DBConn.Open()
-            DBCommand.ExecuteNonQuery()
-            MessageBox.Show("Database has been deleted", "", MessageBoxButtons.OK,
-                            MessageBoxIcon.Information)
-        Catch ex As Exception
-            MessageBox.Show(ex.ToString())
-        End Try
+        'Execute SQL command
+        ExecuteSQL(strSQLCommand)
 
         If (DBConn.State = ConnectionState.Open) Then
             DBConn.Close()
