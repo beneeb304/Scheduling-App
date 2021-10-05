@@ -6,18 +6,12 @@
 ?. Add loading bar on exit if deleting db?
 ?. Control focus
 
+thoughts:
+- should i populate the appointments table at load as empty and then change each time slot when a patient wants it?
+
+- Yes, then remove from the empty slots from the appointments table as they are removed
+- Could even do something like NOT select available slots for doctors appointments
+
+- need to figure out the whole data thing...
 
 
-
-
-
-
-
-
-
-2. 
-	- Check if patient exists
-		- Yes, continue
-		- No, collect info
-			- AddPatient()
-	- 

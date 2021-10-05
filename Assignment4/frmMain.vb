@@ -8,6 +8,9 @@ Public Class frmMain
     'Name of the database server
     Const strSERVERNAME As String = "(localdb)\MSSQLLocalDB"
 
+    'Number of days in a week
+    Const intWEEKDAYCNT As Integer = 5
+
     'Path to database in executable
     Dim strDBPATH As String = My.Application.Info.DirectoryPath & "\" & strDBNAME & ".mdf"
 
@@ -16,6 +19,9 @@ Public Class frmMain
                      strDBNAME & ";Integrated Security=SSPI;AttachDbFileName=" & strDBPATH
 
     Dim DBConn As SqlConnection
+
+    'Date of today
+    Dim todayDate As Date = Today
 
     Private Sub frmMain_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         'If the database doesn't exist, create it
@@ -134,16 +140,29 @@ Public Class frmMain
                     End While
                 End If
 
-                'Check of patient doesn't exists yet
+                'Check if patient doesn't exists yet
                 If lstPhone.Contains(strLine(1)) = False Then
                     'If not, add them
                     AddPatient(strLine(1))
                 End If
 
+                'Patient is making an appointment
+                If strLine(2) = "A" Then
+                    'Get selector
+                    Dim chrSelector As Char = strLine(3).Substring(0, strLine(3).IndexOf(" "))
 
+                    Select Case strLine(3)
+                        'Next available preference
+                        Case chrSelector = "N"
 
+                        'Doctor preference
+                        Case chrSelector = "D"
 
+                        'Time/day preference
+                        Case "T"
 
+                    End Select
+                End If
             End If
         Next
 
@@ -300,12 +319,15 @@ Public Class frmMain
         'Build the Appointments Table
         strSQLCommand = "CREATE TABLE Appointments
             (TUID int IDENTITY(1,1) PRIMARY KEY,
-            PatientTUID int FOREIGN KEY REFERENCES Patients(TUID) NOT NULL,
+            PatientTUID int FOREIGN KEY REFERENCES Patients(TUID),
             DoctorTUID int FOREIGN KEY REFERENCES Doctors(TUID) NOT NULL,
             Day Date NOT NULL,
             AppointmentLength int NOT NULL,
             StartTime Time(0) NOT NULL,
             EndTime Time(0) NOT NULL)"
+
+
+        'FIND ME might have to remote foreign key constraint on PatientTUID
 
         'Execute SQL command
         ExecuteSQLNonQ(strSQLCommand)
@@ -316,6 +338,18 @@ Public Class frmMain
         'String to hold SQL command text
         Dim strSQLCommand As String
 
+        'Doctor start and end time
+        Dim strStart, strEnd As String
+
+        'Insert initial available appointments for 1 week out
+        Dim dataReader As SqlDataReader
+
+        'Create time variable
+        Dim startTime As DateTime
+
+        'Doctor TUID
+        Dim intDoc As Integer
+
         strSQLCommand = "INSERT INTO Doctors VALUES 
             ('Ray', 'Strantz'),
             ('Henry', 'Jones, Jr.'),
@@ -325,7 +359,7 @@ Public Class frmMain
         ExecuteSQLNonQ(strSQLCommand)
 
         strSQLCommand = "INSERT INTO Availability VALUES 
-            (1, 'M', '10:00', '14:00', 7), 
+            (1, 'M', '10:00', '14:00', 7),
             (1, 'W', '10:00', '14:00', 7),
             (1, 'F', '10:00', '14:00', 7),
             (2, 'M', '8:00', '13:00', 8),
@@ -338,6 +372,97 @@ Public Class frmMain
 
         'Execute SQL command
         ExecuteSQLNonQ(strSQLCommand)
+
+        For i = 0 To intWEEKDAYCNT
+
+            'Avoid weekends
+            If todayDate.DayOfWeek.ToString() = "Saturday" Then
+                'Increment day twice
+                todayDate = todayDate.AddDays(2)
+            ElseIf todayDate.DayOfWeek.ToString() = "Sunday" Then
+                'Increment day once
+                todayDate = todayDate.AddDays(1)
+            End If
+
+            Select Case todayDate.DayOfWeek.ToString()
+                Case "Monday"
+                    'Select all doctors who have availability for M
+                    strSQLCommand = "SELECT DoctorTUID, StartTime, EndTime FROM Availability WHERE Day = 'M'"
+
+                    'Execute SQL command
+                    dataReader = ExecuteSQLReader(strSQLCommand)
+
+                    'Empty SQL command
+                    strSQLCommand = ""
+
+                    If dataReader.HasRows() Then
+
+                        'While there's data, read it
+                        While dataReader.Read()
+
+                            Debug.WriteLine(dataReader("DoctorTUID"))
+                            Debug.WriteLine(dataReader("StartTime").ToString())
+                            Debug.WriteLine(dataReader("EndTime").ToString())
+
+                            'Capture data returned from query
+                            intDoc = dataReader("DoctorTUID")
+                            strStart = dataReader("StartTime").ToString()
+                            strEnd = dataReader("EndTime").ToString()
+
+                            'Read
+                            startTime = CDate(strStart)
+
+                            'Loop while the start time is before the end time
+                            While startTime < CDate(strEnd)
+
+                                'If first time adding to SQL command, create it
+                                If strSQLCommand.Length = 0 Then
+                                    strSQLCommand = "INSERT INTO Appointments VALUES"
+                                End If
+
+                                'Append to SQL command
+                                strSQLCommand &= "(0, " & intDoc & " 'M', 15, " & startTime & ", " & startTime.AddMinutes(15) & ")," & vbCrLf
+
+                                'Increment time by 15 minutes
+                                startTime = startTime.AddMinutes(15)
+                            End While
+                        End While
+
+                        'Close datareader
+                        dataReader.Close()
+
+                        'Chop off last comma
+                        strSQLCommand = strSQLCommand.Substring(0, strSQLCommand.LastIndexOf(","))
+
+                        MessageBox.Show(strSQLCommand)
+
+                        Debug.WriteLine(strSQLCommand)
+
+                        ExecuteSQLNonQ(strSQLCommand)
+                    End If
+
+                    'For loop through each
+
+                        'Create variable for start time
+
+                        'While we are before end time
+                            'add available to appointment table
+                            'increment time var by 15 minutes
+
+                Case "Tuesday"
+
+                Case "Wednesday"
+
+                Case "Thursday"
+
+                Case "Friday"
+
+            End Select
+
+            'Increment day
+            todayDate = todayDate.AddDays(1)
+        Next
+
     End Sub
 
     Private Sub DeleteDatabase(strSERVERNAME As String, strDBNAME As String)
@@ -398,7 +523,19 @@ Public Class frmMain
             dataReader.Close()
             DisconnectFromSQL()
         ElseIf cmbFilter.SelectedItem = "Doctors" Then
+            strSQLCommand = "SELECT FirstName, LastName FROM Doctors"
 
+            Dim dataReader As SqlDataReader = ExecuteSQLReader(strSQLCommand)
+
+            'While there's data, read it
+            While dataReader.Read()
+                'Add to listbox
+                lstSelect.Items.Add("Dr. " & dataReader("FirstName") & " " & dataReader("LastName"))
+            End While
+
+            'Tidy up
+            dataReader.Close()
+            DisconnectFromSQL()
         End If
     End Sub
 
