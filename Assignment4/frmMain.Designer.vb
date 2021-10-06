@@ -22,7 +22,6 @@ Partial Class frmMain
     'Do not modify it using the code editor.
     <System.Diagnostics.DebuggerStepThrough()> _
     Private Sub InitializeComponent()
-        Me.components = New System.ComponentModel.Container()
         Me.lstSelect = New System.Windows.Forms.ListBox()
         Me.Label1 = New System.Windows.Forms.Label()
         Me.lstDisplay = New System.Windows.Forms.ListBox()
@@ -31,12 +30,10 @@ Partial Class frmMain
         Me.txtFileName = New System.Windows.Forms.TextBox()
         Me.btnEnterFile = New System.Windows.Forms.Button()
         Me.btnSelectFile = New System.Windows.Forms.Button()
-        Me.ErrorProvider = New System.Windows.Forms.ErrorProvider(Me.components)
         Me.cmbFilter = New System.Windows.Forms.ComboBox()
         Me.btnAddPatient = New System.Windows.Forms.Button()
         Me.Button1 = New System.Windows.Forms.Button()
         Me.Button2 = New System.Windows.Forms.Button()
-        CType(Me.ErrorProvider, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.SuspendLayout()
         '
         'lstSelect
@@ -117,10 +114,6 @@ Partial Class frmMain
         Me.btnSelectFile.Text = "Select Text File"
         Me.btnSelectFile.UseVisualStyleBackColor = True
         '
-        'ErrorProvider
-        '
-        Me.ErrorProvider.ContainerControl = Me
-        '
         'cmbFilter
         '
         Me.cmbFilter.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList
@@ -182,7 +175,6 @@ Partial Class frmMain
         Me.Margin = New System.Windows.Forms.Padding(2)
         Me.Name = "frmMain"
         Me.Text = "Scheduler"
-        CType(Me.ErrorProvider, System.ComponentModel.ISupportInitialize).EndInit()
         Me.ResumeLayout(False)
         Me.PerformLayout()
 
@@ -196,7 +188,6 @@ Partial Class frmMain
     Friend WithEvents txtFileName As TextBox
     Friend WithEvents btnEnterFile As Button
     Friend WithEvents btnSelectFile As Button
-    Friend WithEvents ErrorProvider As ErrorProvider
     Friend WithEvents cmbFilter As ComboBox
     Friend WithEvents btnAddPatient As Button
     Friend WithEvents Button2 As Button

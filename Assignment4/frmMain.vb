@@ -3,25 +3,28 @@ Imports System.IO
 
 Public Class frmMain
     'Name of database
-    Const strDBNAME As String = "Scheduling"
+    Private Const strDBNAME As String = "Scheduling"
 
     'Name of the database server
-    Const strSERVERNAME As String = "(localdb)\MSSQLLocalDB"
+    Private Const strSERVERNAME As String = "(localdb)\MSSQLLocalDB"
 
     'Number of days in a week
-    Const intWEEKDAYCNT As Integer = 5
+    Private Const intDAYSINWEEK As Integer = 7
+
+    'Time increment for appointments
+    Private Const intTIMEINCREMENT As Integer = 15
 
     'Path to database in executable
-    Dim strDBPATH As String = My.Application.Info.DirectoryPath & "\" & strDBNAME & ".mdf"
+    Private ReadOnly strDBPATH As String = My.Application.Info.DirectoryPath & "\" & strDBNAME & ".mdf"
 
     'This is the full connection string
-    Dim strCONNECTION As String = "SERVER=" & strSERVERNAME & ";DATABASE=" &
+    Private ReadOnly strCONNECTION As String = "SERVER=" & strSERVERNAME & ";DATABASE=" &
                      strDBNAME & ";Integrated Security=SSPI;AttachDbFileName=" & strDBPATH
 
-    Dim DBConn As SqlConnection
+    Private DBConn As SqlConnection
 
     'Date of today
-    Dim todayDate As Date = Today
+    Private ReadOnly todayDate As Date = Today
 
     Private Sub frmMain_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         'If the database doesn't exist, create it
@@ -72,7 +75,7 @@ Public Class frmMain
 
     Private Sub btnQuit_Click(sender As Object, e As EventArgs) Handles btnQuit.Click
         'Quit nicely
-        Me.Close()
+        Close()
     End Sub
 
     Private Sub frmMain_FormClosing(sender As Object, e As FormClosingEventArgs) Handles MyBase.FormClosing
@@ -81,7 +84,7 @@ Public Class frmMain
 
         'If yes, delete it. Otherwise, keep exiting
         If result = DialogResult.Yes Then
-            DeleteDatabase(strSERVERNAME, strDBNAME)
+            DeleteDatabase()
         ElseIf result = DialogResult.Cancel Then
             e.Cancel = True
         End If
@@ -92,7 +95,7 @@ Public Class frmMain
         Dim strLine() As String
         Dim strPatients As String = ""
         Dim strAppointments As String = ""
-        Dim lstPhone As List(Of String) = New List(Of String)
+        Dim lstPhone As New List(Of String)
 
         'Cycle through each line
         For Each line As String In strLines
@@ -195,10 +198,10 @@ Public Class frmMain
 
     Private Sub ExecuteSQLNonQ(strSQL As String)
         'Build a SQL Server database from scratch
-        Dim DBCmd As SqlCommand = New SqlCommand()
-
-        DBCmd.CommandText = strSQL
-        DBCmd.Connection = DBConn
+        Dim DBCmd As New SqlCommand With {
+            .CommandText = strSQL,
+            .Connection = DBConn
+        }
 
         Try
             DBCmd.ExecuteNonQuery()
@@ -209,7 +212,7 @@ Public Class frmMain
 
     Private Function ExecuteSQLReader(strSQL As String) As SqlDataReader
         'Build a SQL Server database from scratch
-        Dim DBCmd As SqlCommand = New SqlCommand()
+        Dim DBCmd As New SqlCommand()
         Dim dataReader As SqlDataReader = Nothing
 
         DBCmd.CommandText = strSQL
@@ -338,18 +341,6 @@ Public Class frmMain
         'String to hold SQL command text
         Dim strSQLCommand As String
 
-        'Doctor start and end time
-        Dim strStart, strEnd As String
-
-        'Insert initial available appointments for 1 week out
-        Dim dataReader As SqlDataReader
-
-        'Create time variable
-        Dim startTime As DateTime
-
-        'Doctor TUID
-        Dim intDoc As Integer
-
         strSQLCommand = "INSERT INTO Doctors VALUES 
             ('Ray', 'Strantz'),
             ('Henry', 'Jones, Jr.'),
@@ -373,99 +364,97 @@ Public Class frmMain
         'Execute SQL command
         ExecuteSQLNonQ(strSQLCommand)
 
-        For i = 0 To intWEEKDAYCNT
-
-            'Avoid weekends
-            If todayDate.DayOfWeek.ToString() = "Saturday" Then
-                'Increment day twice
-                todayDate = todayDate.AddDays(2)
-            ElseIf todayDate.DayOfWeek.ToString() = "Sunday" Then
-                'Increment day once
-                todayDate = todayDate.AddDays(1)
-            End If
-
-            Select Case todayDate.DayOfWeek.ToString()
+        'Cycle through each day of the week starting with tomorrow
+        For i = 1 To intDAYSINWEEK
+            Select Case todayDate.AddDays(i).DayOfWeek.ToString()
                 Case "Monday"
                     'Select all doctors who have availability for M
-                    strSQLCommand = "SELECT DoctorTUID, StartTime, EndTime FROM Availability WHERE Day = 'M'"
-
-                    'Execute SQL command
-                    dataReader = ExecuteSQLReader(strSQLCommand)
-
-                    'Empty SQL command
-                    strSQLCommand = ""
-
-                    If dataReader.HasRows() Then
-
-                        'While there's data, read it
-                        While dataReader.Read()
-
-                            Debug.WriteLine(dataReader("DoctorTUID"))
-                            Debug.WriteLine(dataReader("StartTime").ToString())
-                            Debug.WriteLine(dataReader("EndTime").ToString())
-
-                            'Capture data returned from query
-                            intDoc = dataReader("DoctorTUID")
-                            strStart = dataReader("StartTime").ToString()
-                            strEnd = dataReader("EndTime").ToString()
-
-                            'Read
-                            startTime = CDate(strStart)
-
-                            'Loop while the start time is before the end time
-                            While startTime < CDate(strEnd)
-
-                                'If first time adding to SQL command, create it
-                                If strSQLCommand.Length = 0 Then
-                                    strSQLCommand = "INSERT INTO Appointments VALUES"
-                                End If
-
-                                'Append to SQL command
-                                strSQLCommand &= "(0, " & intDoc & " 'M', 15, " & startTime & ", " & startTime.AddMinutes(15) & ")," & vbCrLf
-
-                                'Increment time by 15 minutes
-                                startTime = startTime.AddMinutes(15)
-                            End While
-                        End While
-
-                        'Close datareader
-                        dataReader.Close()
-
-                        'Chop off last comma
-                        strSQLCommand = strSQLCommand.Substring(0, strSQLCommand.LastIndexOf(","))
-
-                        MessageBox.Show(strSQLCommand)
-
-                        Debug.WriteLine(strSQLCommand)
-
-                        ExecuteSQLNonQ(strSQLCommand)
-                    End If
-
-                    'For loop through each
-
-                        'Create variable for start time
-
-                        'While we are before end time
-                            'add available to appointment table
-                            'increment time var by 15 minutes
-
+                    PopulateAppointments("M")
                 Case "Tuesday"
-
+                    'Select all doctors who have availability for T
+                    PopulateAppointments("T")
                 Case "Wednesday"
-
+                    'Select all doctors who have availability for W
+                    PopulateAppointments("W")
                 Case "Thursday"
-
+                    'Select all doctors who have availability for R
+                    PopulateAppointments("R")
                 Case "Friday"
-
+                    'Select all doctors who have availability for W
+                    PopulateAppointments("F")
             End Select
-
-            'Increment day
-            todayDate = todayDate.AddDays(1)
         Next
-
     End Sub
 
-    Private Sub DeleteDatabase(strSERVERNAME As String, strDBNAME As String)
+    Private Sub PopulateAppointments(chrDay As Char)
+
+
+        'For loop through each
+
+        'Create variable for start time
+
+        'While we are before end time
+        'add available to appointment table
+        'increment time var by 15 minutes
+
+
+
+        'Insert initial available appointments for 1 week out
+        Dim dataReader As SqlDataReader
+
+        'Create time variables
+        Dim startTime, endTime As Date
+
+        'Doctor TUID
+        Dim intDoc As Integer
+
+        'Create SQL Command
+        Dim strSQLCommand As String = "SELECT DoctorTUID, StartTime, EndTime FROM Availability WHERE Day = '" & chrDay & "'"
+
+        'Execute SQL command
+        dataReader = ExecuteSQLReader(strSQLCommand)
+
+        'Empty SQL command
+        strSQLCommand = ""
+
+        If dataReader.HasRows() Then
+
+            'While there's data, read it
+            While dataReader.Read()
+                'Capture data returned from query
+                intDoc = dataReader("DoctorTUID")
+                startTime = CDate(dataReader("StartTime").ToString())
+                endTime = CDate(dataReader("EndTime").ToString())
+
+                'Loop while the start time is before the end time
+                While startTime < endTime
+
+                    'If first time adding to SQL command, create it
+                    If strSQLCommand.Length = 0 Then
+                        strSQLCommand = "INSERT INTO Appointments VALUES" & vbCrLf
+                    End If
+
+                    'Append to SQL command
+                    strSQLCommand &= "(0, " & intDoc & ", '" & chrDay & "', " & intTIMEINCREMENT & " '" & startTime & "', '" & startTime.AddMinutes(intTIMEINCREMENT) & "')," & vbCrLf
+
+                    'Increment time by 15 minutes
+                    startTime = startTime.AddMinutes(intTIMEINCREMENT)
+                End While
+            End While
+
+            'Close datareader
+            dataReader.Close()
+
+            'Chop off last comma
+            strSQLCommand = strSQLCommand.Substring(0, strSQLCommand.LastIndexOf(","))
+
+            MessageBox.Show(strSQLCommand)
+
+            ExecuteSQLNonQ(strSQLCommand)
+        End If
+    End Sub
+
+    Private Sub DeleteDatabase()
         'This routine deletes a database completely from code. Credit to CIS 311 ch 15 notes.
 
         'String to hold SQL command text
