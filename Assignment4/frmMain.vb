@@ -141,6 +141,8 @@ Public Class frmMain
                         'Add phone numbers to list
                         lstPhone.Add(dataReader("Phone"))
                     End While
+
+                    dataReader.Close()
                 End If
 
                 'Check if patient doesn't exists yet
@@ -497,10 +499,12 @@ Public Class frmMain
 
         ConnectToSQL(False)
 
+        Dim dataReader As SqlDataReader
+
         If cmbFilter.SelectedItem = "Patients" Then
             strSQLCommand = "SELECT Phone, FirstName, LastName FROM Patients"
 
-            Dim dataReader As SqlDataReader = ExecuteSQLReader(strSQLCommand)
+            dataReader = ExecuteSQLReader(strSQLCommand)
 
             'While there's data, read it
             While dataReader.Read()
@@ -510,11 +514,10 @@ Public Class frmMain
 
             'Tidy up
             dataReader.Close()
-            DisconnectFromSQL()
         ElseIf cmbFilter.SelectedItem = "Doctors" Then
             strSQLCommand = "SELECT FirstName, LastName FROM Doctors"
 
-            Dim dataReader As SqlDataReader = ExecuteSQLReader(strSQLCommand)
+            dataReader = ExecuteSQLReader(strSQLCommand)
 
             'While there's data, read it
             While dataReader.Read()
@@ -524,8 +527,10 @@ Public Class frmMain
 
             'Tidy up
             dataReader.Close()
-            DisconnectFromSQL()
         End If
+
+        'Tidy up
+        DisconnectFromSQL()
     End Sub
 
     Private Sub btnAddPatient_Click(sender As Object, e As EventArgs) Handles btnAddPatient.Click
