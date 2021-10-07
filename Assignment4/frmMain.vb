@@ -516,15 +516,15 @@ Public Class frmMain
 
             'Tidy up
             dataReader.Close()
-        ElseIf cmbFilter.SelectedItem = "Doctors" Then
-            strSQLCommand = "SELECT FirstName, LastName FROM Doctors"
+        ElseIf cmbFilter.SelectedItem = "Doctor Appointments" Or cmbFilter.SelectedItem = "Doctor Availability" Then
+            strSQLCommand = "SELECT TUID, FirstName, LastName FROM Doctors"
 
             dataReader = ExecuteSQLReader(strSQLCommand)
 
             'While there's data, read it
             While dataReader.Read()
                 'Add to listbox
-                lstSelect.Items.Add("Dr. " & dataReader("FirstName") & " " & dataReader("LastName"))
+                lstSelect.Items.Add(dataReader("TUID") & " - Dr. " & dataReader("FirstName") & " " & dataReader("LastName"))
             End While
 
             'Tidy up
@@ -540,5 +540,34 @@ Public Class frmMain
         Dim strPhone As String = InputBox("Please enter the patient's phone number.", "New patient! Please fill out their information.")
 
         AddPatient(strPhone)
+    End Sub
+
+    Private Sub lstSelect_SelectedIndexChanged(sender As Object, e As EventArgs) Handles lstSelect.SelectedIndexChanged
+        'Clear listboxes
+        lstDisplay.Items.Clear()
+
+        ConnectToSQL(False)
+
+        'Determine ff selecting Patients, Doctor Appointments, or Doctor Availability
+        If cmbFilter.SelectedItem = "Patients" Then
+
+        ElseIf cmbFilter.SelectedItem = "Doctor Appointments" Then
+
+        ElseIf cmbFilter.SelectedItem = "Doctor Availability" Then
+            Dim intTUID As Integer = lstSelect.SelectedItem.ToString().Substring(0, 1)
+            Dim dataReader = ExecuteSQLReader("SELECT Day, StartTime, EndTime FROM Appointments WHERE DoctorTUID = " & intTUID & "AND PatientTUID IS NULL")
+            Dim thisDate As Date
+
+            'While there's data, read it
+            While dataReader.Read()
+                'Get day of week
+                thisDate = CDate(dataReader("Day").ToString())
+
+                'Add to listbox
+                lstDisplay.Items.Add(thisDate.DayOfWeek.ToString() & ", " & CStr(dataReader("Day")) & " from " & dataReader("StartTime").ToString() & " to " & dataReader("EndTime").ToString())
+            End While
+
+            dataReader.Close()
+        End If
     End Sub
 End Class

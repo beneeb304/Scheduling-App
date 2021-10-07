@@ -61,6 +61,7 @@ Partial Class frmMain
         Me.lstDisplay.Location = New System.Drawing.Point(169, 20)
         Me.lstDisplay.Margin = New System.Windows.Forms.Padding(2)
         Me.lstDisplay.Name = "lstDisplay"
+        Me.lstDisplay.SelectionMode = System.Windows.Forms.SelectionMode.None
         Me.lstDisplay.Size = New System.Drawing.Size(420, 264)
         Me.lstDisplay.TabIndex = 2
         '
@@ -118,7 +119,7 @@ Partial Class frmMain
         '
         Me.cmbFilter.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList
         Me.cmbFilter.FormattingEnabled = True
-        Me.cmbFilter.Items.AddRange(New Object() {"Doctors", "Patients"})
+        Me.cmbFilter.Items.AddRange(New Object() {"Doctor Appointments", "Doctor Availability", "Patients"})
         Me.cmbFilter.Location = New System.Drawing.Point(10, 263)
         Me.cmbFilter.MaxDropDownItems = 2
         Me.cmbFilter.Name = "cmbFilter"
