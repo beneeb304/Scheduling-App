@@ -32,8 +32,8 @@ Partial Class frmMain
         Me.btnSelectFile = New System.Windows.Forms.Button()
         Me.cmbFilter = New System.Windows.Forms.ComboBox()
         Me.btnAddPatient = New System.Windows.Forms.Button()
-        Me.Button1 = New System.Windows.Forms.Button()
-        Me.Button2 = New System.Windows.Forms.Button()
+        Me.btnCancel = New System.Windows.Forms.Button()
+        Me.btnChange = New System.Windows.Forms.Button()
         Me.SuspendLayout()
         '
         'lstSelect
@@ -135,33 +135,33 @@ Partial Class frmMain
         Me.btnAddPatient.Text = "Add New Patient"
         Me.btnAddPatient.UseVisualStyleBackColor = True
         '
-        'Button1
+        'btnCancel
         '
-        Me.Button1.Location = New System.Drawing.Point(211, 297)
-        Me.Button1.Margin = New System.Windows.Forms.Padding(2)
-        Me.Button1.Name = "Button1"
-        Me.Button1.Size = New System.Drawing.Size(175, 55)
-        Me.Button1.TabIndex = 14
-        Me.Button1.Text = "Cancel Appointment"
-        Me.Button1.UseVisualStyleBackColor = True
+        Me.btnCancel.Location = New System.Drawing.Point(211, 297)
+        Me.btnCancel.Margin = New System.Windows.Forms.Padding(2)
+        Me.btnCancel.Name = "btnCancel"
+        Me.btnCancel.Size = New System.Drawing.Size(175, 55)
+        Me.btnCancel.TabIndex = 14
+        Me.btnCancel.Text = "Cancel Appointment"
+        Me.btnCancel.UseVisualStyleBackColor = True
         '
-        'Button2
+        'btnChange
         '
-        Me.Button2.Location = New System.Drawing.Point(413, 297)
-        Me.Button2.Margin = New System.Windows.Forms.Padding(2)
-        Me.Button2.Name = "Button2"
-        Me.Button2.Size = New System.Drawing.Size(175, 55)
-        Me.Button2.TabIndex = 15
-        Me.Button2.Text = "Change Appointment"
-        Me.Button2.UseVisualStyleBackColor = True
+        Me.btnChange.Location = New System.Drawing.Point(413, 297)
+        Me.btnChange.Margin = New System.Windows.Forms.Padding(2)
+        Me.btnChange.Name = "btnChange"
+        Me.btnChange.Size = New System.Drawing.Size(175, 55)
+        Me.btnChange.TabIndex = 15
+        Me.btnChange.Text = "Change Appointment"
+        Me.btnChange.UseVisualStyleBackColor = True
         '
         'frmMain
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 13.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
         Me.ClientSize = New System.Drawing.Size(600, 394)
-        Me.Controls.Add(Me.Button2)
-        Me.Controls.Add(Me.Button1)
+        Me.Controls.Add(Me.btnChange)
+        Me.Controls.Add(Me.btnCancel)
         Me.Controls.Add(Me.btnAddPatient)
         Me.Controls.Add(Me.cmbFilter)
         Me.Controls.Add(Me.btnQuit)
@@ -190,6 +190,6 @@ Partial Class frmMain
     Friend WithEvents btnSelectFile As Button
     Friend WithEvents cmbFilter As ComboBox
     Friend WithEvents btnAddPatient As Button
-    Friend WithEvents Button2 As Button
-    Friend WithEvents Button1 As Button
+    Friend WithEvents btnChange As Button
+    Friend WithEvents btnCancel As Button
 End Class
