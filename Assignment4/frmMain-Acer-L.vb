@@ -23,6 +23,9 @@ Public Class frmMain
 
     Private DBConn As SqlConnection
 
+    'Date of today
+    Private ReadOnly todayDate As Date = Today
+
     Private Sub frmMain_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         'If the database doesn't exist, create it
         If Not IO.File.Exists(strDBPATH) Then
@@ -161,7 +164,7 @@ Public Class frmMain
                         Case chrSelector = "D"
 
                         'Time/day preference
-                        Case chrSelector = "T"
+                        Case "T"
 
                     End Select
                 End If
@@ -320,13 +323,16 @@ Public Class frmMain
 
         'Build the Appointments Table
         strSQLCommand = "CREATE TABLE Appointments
-            (TUID int IDENTITY(1,1) PRIMARY KEY, 
-            PatientTUID int FOREIGN KEY REFERENCES Patients(TUID), 
+            (TUID int IDENTITY(1,1) PRIMARY KEY,
+            PatientTUID int FOREIGN KEY REFERENCES Patients(TUID),
             DoctorTUID int FOREIGN KEY REFERENCES Doctors(TUID) NOT NULL,
             Day Date NOT NULL,
             AppointmentLength int NOT NULL,
-            StartTime TIME(0), 
-            EndTime TIME(0))"
+            StartTime Time(0) NOT NULL,
+            EndTime Time(0) NOT NULL)"
+
+
+        'FIND ME might have to remote foreign key constraint on PatientTUID
 
         'Execute SQL command
         ExecuteSQLNonQ(strSQLCommand)
@@ -336,7 +342,6 @@ Public Class frmMain
 
         'String to hold SQL command text
         Dim strSQLCommand As String
-        Dim strDayofWeek As String
 
         strSQLCommand = "INSERT INTO Doctors VALUES 
             ('Ray', 'Strantz'),
@@ -361,35 +366,29 @@ Public Class frmMain
         'Execute SQL command
         ExecuteSQLNonQ(strSQLCommand)
 
-        'Create today date object
-        Dim thisDate As Date = Date.Today
-
         'Cycle through each day of the week starting with tomorrow
         For i = 1 To intDAYSINWEEK
-            'Get day of the week
-            strDayofWeek = thisDate.AddDays(i).DayOfWeek.ToString()
-
-            Select Case strDayofWeek
+            Select Case todayDate.AddDays(i).DayOfWeek.ToString()
                 Case "Monday"
                     'Select all doctors who have availability for M
-                    PopulateAppointments(CStr(thisDate.AddDays(i)), "M")
+                    PopulateAppointments("M")
                 Case "Tuesday"
                     'Select all doctors who have availability for T
-                    PopulateAppointments(CStr(thisDate.AddDays(i)), "T")
+                    PopulateAppointments("T")
                 Case "Wednesday"
                     'Select all doctors who have availability for W
-                    PopulateAppointments(CStr(thisDate.AddDays(i)), "W")
+                    PopulateAppointments("W")
                 Case "Thursday"
                     'Select all doctors who have availability for R
-                    PopulateAppointments(CStr(thisDate.AddDays(i)), "R")
+                    PopulateAppointments("R")
                 Case "Friday"
                     'Select all doctors who have availability for W
-                    PopulateAppointments(CStr(thisDate.AddDays(i)), "F")
+                    PopulateAppointments("F")
             End Select
         Next
     End Sub
 
-    Private Sub PopulateAppointments(strDate As String, chrDay As Char)
+    Private Sub PopulateAppointments(chrDay As Char)
 
 
         'For loop through each
@@ -426,7 +425,6 @@ Public Class frmMain
             While dataReader.Read()
                 'Capture data returned from query
                 intDoc = dataReader("DoctorTUID")
-
                 startTime = CDate(dataReader("StartTime").ToString())
                 endTime = CDate(dataReader("EndTime").ToString())
 
@@ -439,9 +437,7 @@ Public Class frmMain
                     End If
 
                     'Append to SQL command
-                    strSQLCommand &= "(NULL, " & intDoc & ", '" & strDate & "', " &
-                        intTIMEINCREMENT & ", '" & startTime.ToString("HH:mm") &
-                        "', '" & startTime.AddMinutes(intTIMEINCREMENT).ToString("HH:mm") & "')," & vbCrLf
+                    strSQLCommand &= "(0, " & intDoc & ", '" & chrDay & "', " & intTIMEINCREMENT & " '" & startTime & "', '" & startTime.AddMinutes(intTIMEINCREMENT) & "')," & vbCrLf
 
                     'Increment time by 15 minutes
                     startTime = startTime.AddMinutes(intTIMEINCREMENT)
@@ -453,6 +449,8 @@ Public Class frmMain
 
             'Chop off last comma
             strSQLCommand = strSQLCommand.Substring(0, strSQLCommand.LastIndexOf(","))
+
+            MessageBox.Show(strSQLCommand)
 
             ExecuteSQLNonQ(strSQLCommand)
         End If
@@ -513,9 +511,6 @@ Public Class frmMain
                 'Add to listbox
                 lstSelect.Items.Add(dataReader("Phone") & " - " & dataReader("FirstName") & " " & dataReader("LastName"))
             End While
-
-            'Tidy up
-            dataReader.Close()
         ElseIf cmbFilter.SelectedItem = "Doctors" Then
             strSQLCommand = "SELECT FirstName, LastName FROM Doctors"
 
@@ -526,12 +521,10 @@ Public Class frmMain
                 'Add to listbox
                 lstSelect.Items.Add("Dr. " & dataReader("FirstName") & " " & dataReader("LastName"))
             End While
-
-            'Tidy up
-            dataReader.Close()
         End If
 
         'Tidy up
+        dataReader.Close()
         DisconnectFromSQL()
     End Sub
 
