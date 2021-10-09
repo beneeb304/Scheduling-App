@@ -93,13 +93,14 @@ Public Class frmMain
         Dim strPatients As String = ""
         Dim strAppointments As String = ""
         Dim lstPhone As New List(Of String)
+        Dim intConsRows As Integer
 
         'Cycle through each line
         For Each line As String In strLines
             'Split data by vbTab
             strLine = line.Split(vbTab)
 
-            'Pick out patients first
+            'Patient
             If strLine(0) = "P" Then
                 'If first time, add beginning of insert statement
                 If strPatients.Length = 0 Then
@@ -127,44 +128,152 @@ Public Class frmMain
             'Split data by vbTab
             strLine = line.Split(vbTab)
 
-            'Pick out appointments second
+            'Appointment
             If strLine(0) = "A" Then
-                'If first time, get list of phone numbers
-                If strAppointments.Length = 0 Then
-                    Dim dataReader = ExecuteSQLReader("SELECT Phone FROM Patients")
 
-                    'While there's data, read it
-                    While dataReader.Read()
-                        'Add phone numbers to list
-                        lstPhone.Add(dataReader("Phone"))
-                    End While
+                'FIND ME figure this out to only run once...
+                'If first time, add phone numbers to listbox
+                'If strAppointments.Length = 0 Then
+                '    Dim dataReader = ExecuteSQLReader("SELECT Phone FROM Patients")
 
-                    dataReader.Close()
-                End If
+                '    'While there's data, read it
+                '    While dataReader.Read()
+                '        'Add phone numbers to list
+                '        lstPhone.Add(dataReader("Phone"))
+                '    End While
 
-                'Check if patient doesn't exists yet
-                If lstPhone.Contains(strLine(1)) = False Then
-                    'If not, add them
-                    AddPatient(strLine(1))
-                End If
+                '    dataReader.Close()
+                'End If
 
-                'Patient is making an appointment
-                If strLine(2) = "A" Then
-                    'Get selector
-                    Dim chrSelector As Char = strLine(3).Substring(0, strLine(3).IndexOf(" "))
+                ''Check if patient doesn't exist yet
+                'If lstPhone.Contains(strLine(1)) = False Then
+                '    'If not, add them
+                '    AddPatient(strLine(1))
+                'End If
 
-                    Select Case strLine(3)
-                        'Next available preference
-                        Case chrSelector = "N"
+                'Operation
+                Select Case strLine(2)
+                    'Adding appointment
+                    Case "A"
+                        'Get selector
+                        Dim chrSelector As Char = strLine(3).Substring(0, 1)
 
-                        'Doctor preference
-                        Case chrSelector = "D"
+                        'Get patient tuid
+                        Dim dataReader = ExecuteSQLReader("SELECT TUID FROM Patients WHERE Phone = '" & strLine(1) & "'")
+                        Dim intPatientTUID As Integer
+                        While dataReader.Read()
+                            'Get patient TUID
+                            intPatientTUID = Integer.Parse(dataReader("TUID").ToString())
+                        End While
+                        dataReader.Close()
 
-                        'Time/day preference
-                        Case chrSelector = "T"
+                        'Determine preference
+                        Select Case chrSelector
+                            'Next available preference
+                            Case "N"
+                                'Get number of consecutive rows we need for this appointment
+                                intConsRows = Integer.Parse(strLine(4)) / 15
 
-                    End Select
-                End If
+                                'Get all appointments that are available
+                                dataReader = ExecuteSQLReader("SELECT StartTime, EndTime, Day FROM Appointments WHERE PatientTUID IS NULL")
+
+                                Dim thisTime As Date = Nothing
+                                Dim thisDate As Date = Nothing
+
+                                Dim intCtr As Integer = 1
+
+                                Dim blnFound As Boolean = False
+
+                                'While there's data, read it
+                                While dataReader.Read()
+
+                                    Debug.WriteLine(thisTime.ToString())
+                                    Debug.WriteLine(CDate(dataReader("StartTime").ToString()))
+
+                                    'Initialize thisDate
+                                    If thisTime = Nothing Then
+                                        thisTime = CDate(dataReader("StartTime").ToString())
+                                    Else
+                                        'Check if this loop and last loop are consecutive (15 minutes apart)
+                                        If DateDiff(DateInterval.Minute, thisTime, CDate(dataReader("StartTime").ToString())) = 15 Then 'Long.Parse(15) 
+                                            'Increment counter
+                                            intCtr += 1
+
+                                            'Replace last time with this time
+                                            thisTime = CDate(dataReader("StartTime").ToString())
+
+                                            'Check if we have enough slots
+                                            If intCtr = intConsRows Then
+                                                'Set appointment end time
+                                                thisTime = CDate(dataReader("EndTime").ToString())
+
+                                                'Set date
+                                                thisDate = CDate(dataReader("Day").ToString())
+
+                                                'Set found flag
+                                                blnFound = True
+
+                                                'Exit loop
+                                                Exit While
+                                            End If
+                                        Else
+                                            'Reset counter
+                                            intConsRows = 1
+
+                                            'Reset time
+                                            thisTime = Nothing
+                                        End If
+                                    End If
+                                End While
+
+                                dataReader.Close()
+
+                                If blnFound Then
+                                    'Alter statement
+                                    Dim strSQL As String
+                                    strSQL = "SET ROWCOUNT 1 " &
+                                        "UPDATE Appointments " &
+                                        "SET PatientTUID = " & intPatientTUID & ", EndTime = '" & thisTime & "', AppointmentLength = " & strLine(4) &
+                                        " WHERE StartTime = '" & thisTime.AddMinutes(Integer.Parse(strLine(4) / -1)) & "' AND Day = '" & thisDate & "'"
+
+                                    Debug.WriteLine(strSQL)
+
+                                    ExecuteSQLNonQ(strSQL)
+
+                                    'Delete following rows
+
+
+                                Else
+                                    MessageBox.Show("We could not find an appointment for " & strLine(1))
+                                End If
+
+                            'Doctor preference
+                            Case "D"
+
+                                'Dim s As String = ""
+                                'For Each thign In strLine
+                                '    s &= thign & " "
+                                'Next
+                                'MessageBox.Show(s)
+
+                            'Time/day preference
+                            Case "T"
+
+                                'Dim s As String = ""
+                                'For Each thign In strLine
+                                '    s &= thign & " "
+                                'Next
+                                'MessageBox.Show(s)
+
+                        End Select
+
+                    'Deleting appointment
+                    Case "D"
+
+                    'Changing appointment
+                    Case "C"
+
+                End Select
             End If
         Next
 
