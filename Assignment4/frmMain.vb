@@ -60,7 +60,7 @@ Public Class frmMain
             'Send string off to be parsed (add CR as splitter)
             ParseTextFile(strText.Split(vbCr))
         Catch ex As Exception
-            MessageBox.Show("Please read in a valid text file!")
+            MessageBox.Show(ex.ToString(), "Please read in a valid text file!")
         End Try
 
         'Empty controls so user is forced to realize new data (if applicable)
@@ -124,7 +124,13 @@ Public Class frmMain
         'Execute SQL command
         ExecuteSQLNonQ(strPatients)
 
+        'Disconnect from the database
+        DisconnectFromSQL()
+
         For Each line As String In strLines
+            'Connect to SQL Server instance
+            ConnectToSQL(False)
+
             'Split data by vbTab
             strLine = line.Split(vbTab)
 
@@ -175,7 +181,7 @@ Public Class frmMain
                                 intConsRows = Integer.Parse(strLine(4)) / 15
 
                                 'Get all appointments that are available
-                                dataReader = ExecuteSQLReader("SELECT StartTime, EndTime, Day FROM Appointments WHERE PatientTUID IS NULL")
+                                dataReader = ExecuteSQLReader("SELECT * FROM Appointments WHERE PatientTUID IS NULL")
 
                                 Dim thisTime As Date = Nothing
                                 Dim thisDate As Date = Nothing
@@ -187,8 +193,9 @@ Public Class frmMain
                                 'While there's data, read it
                                 While dataReader.Read()
 
-                                    Debug.WriteLine(thisTime.ToString())
-                                    Debug.WriteLine(CDate(dataReader("StartTime").ToString()))
+                                    Dim s As String = ""
+
+                                    Dim n As Integer = dataReader.FieldCount
 
                                     'Initialize thisDate
                                     If thisTime = Nothing Then
@@ -234,14 +241,26 @@ Public Class frmMain
                                     strSQL = "SET ROWCOUNT 1 " &
                                         "UPDATE Appointments " &
                                         "SET PatientTUID = " & intPatientTUID & ", EndTime = '" & thisTime & "', AppointmentLength = " & strLine(4) &
+                                        " OUTPUT inserted.[DoctorTUID]" &
                                         " WHERE StartTime = '" & thisTime.AddMinutes(Integer.Parse(strLine(4) / -1)) & "' AND Day = '" & thisDate & "'"
 
-                                    Debug.WriteLine(strSQL)
+                                    'Get doctorTUID
+                                    dataReader = ExecuteSQLReader(strSQL)
+
+                                    Dim intDoctorTUID = 0
+
+                                    While dataReader.Read()
+                                        intDoctorTUID = dataReader("DoctorTUID")
+                                    End While
+
+                                    'Close dataReader
+                                    dataReader.Close()
+
+                                    'Make new SQL command to delete those empty appointment slots
+                                    strSQL = "DELETE FROM Appointments WHERE " & "PatientTUID IS NULL AND DoctorTUID = " & intDoctorTUID &
+                                        " AND Day = '" & thisDate & "' AND EndTime BETWEEN '" & thisTime.AddMinutes(Integer.Parse(strLine(4) / -1) + 15) & "' AND '" & thisTime & "'"
 
                                     ExecuteSQLNonQ(strSQL)
-
-                                    'Delete following rows
-
 
                                 Else
                                     MessageBox.Show("We could not find an appointment for " & strLine(1))
@@ -249,7 +268,29 @@ Public Class frmMain
 
                             'Doctor preference
                             Case "D"
+                                'Get number of consecutive rows we need for this appointment
+                                intConsRows = Integer.Parse(strLine(4)) / 15
 
+                                'Get all appointments that are available
+                                dataReader = ExecuteSQLReader("SELECT * FROM Appointments WHERE PatientTUID IS NULL")
+
+                                Dim thisTime As Date = Nothing
+                                Dim thisDate As Date = Nothing
+
+                                Dim intCtr As Integer = 1
+
+                                Dim blnFound As Boolean = False
+
+                                'While there's data, read it
+                                Dim n As Integer = 0
+
+                                While dataReader.Read()
+                                    n += 1
+                                End While
+
+                                Debug.WriteLine(n)
+
+                                dataReader.Close()
                                 'Dim s As String = ""
                                 'For Each thign In strLine
                                 '    s &= thign & " "
@@ -258,6 +299,30 @@ Public Class frmMain
 
                             'Time/day preference
                             Case "T"
+
+                                'Get number of consecutive rows we need for this appointment
+                                intConsRows = Integer.Parse(strLine(4)) / 15
+
+                                'Get all appointments that are available
+                                dataReader = ExecuteSQLReader("SELECT * FROM Appointments WHERE PatientTUID IS NULL")
+
+                                Dim thisTime As Date = Nothing
+                                Dim thisDate As Date = Nothing
+
+                                Dim intCtr As Integer = 1
+
+                                Dim blnFound As Boolean = False
+
+                                'While there's data, read it
+                                Dim n As Integer = 0
+
+                                While dataReader.Read()
+                                    n += 1
+                                End While
+
+                                Debug.WriteLine(n)
+
+                                dataReader.Close()
 
                                 'Dim s As String = ""
                                 'For Each thign In strLine
@@ -275,10 +340,10 @@ Public Class frmMain
 
                 End Select
             End If
-        Next
 
-        'Disconnect from the database
-        DisconnectFromSQL()
+            'Disconnect from the database
+            DisconnectFromSQL()
+        Next
     End Sub
 
     Private Sub AddPatient(strPhone As String)
