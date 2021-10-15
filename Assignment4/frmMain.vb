@@ -181,7 +181,7 @@ Public Class frmMain
                                 intConsRows = Integer.Parse(strLine(4)) / 15
 
                                 'Get all appointments that are available
-                                dataReader = ExecuteSQLReader("SELECT * FROM Appointments WHERE PatientTUID IS NULL")
+                                dataReader = ExecuteSQLReader("SELECT * FROM Appointments WHERE PatientTUID IS NULL ORDER BY Day, StartTime")
 
                                 Dim thisTime As Date = Nothing
                                 Dim thisDate As Date = Nothing
@@ -192,11 +192,6 @@ Public Class frmMain
 
                                 'While there's data, read it
                                 While dataReader.Read()
-
-                                    Dim s As String = ""
-
-                                    Dim n As Integer = dataReader.FieldCount
-
                                     'Initialize thisDate
                                     If thisTime = Nothing Then
                                         thisTime = CDate(dataReader("StartTime").ToString())
@@ -265,14 +260,29 @@ Public Class frmMain
                                 Else
                                     MessageBox.Show("We could not find an appointment for " & strLine(1))
                                 End If
-
                             'Doctor preference
                             Case "D"
+                                'Get doctor TUID matched with doc last name
+                                dataReader = ExecuteSQLReader("SELECT TUID, LastName FROM Doctors")
+
+                                'Make collection to hold results
+                                Dim dctDocs As New Dictionary(Of String, String)
+
+                                While dataReader.Read()
+                                    dctDocs.Add(dataReader("LastName").ToString(), dataReader("TUID").ToString())
+                                End While
+
+                                'Close dataReader
+                                dataReader.Close()
+
                                 'Get number of consecutive rows we need for this appointment
                                 intConsRows = Integer.Parse(strLine(4)) / 15
 
+                                'Get the doctor TUID
+                                Dim intDoc As Integer = dctDocs.Item(strLine(3).Substring(2))
+
                                 'Get all appointments that are available
-                                dataReader = ExecuteSQLReader("SELECT * FROM Appointments WHERE PatientTUID IS NULL")
+                                dataReader = ExecuteSQLReader("SELECT * FROM Appointments WHERE PatientTUID IS NULL AND DoctorTUID = " & intDoc)
 
                                 Dim thisTime As Date = Nothing
                                 Dim thisDate As Date = Nothing
@@ -282,21 +292,65 @@ Public Class frmMain
                                 Dim blnFound As Boolean = False
 
                                 'While there's data, read it
-                                Dim n As Integer = 0
-
                                 While dataReader.Read()
-                                    n += 1
+                                    'Initialize thisDate
+                                    If thisTime = Nothing Then
+                                        thisTime = CDate(dataReader("StartTime").ToString())
+                                    Else
+                                        'Check if this loop and last loop are consecutive (15 minutes apart)
+                                        If DateDiff(DateInterval.Minute, thisTime, CDate(dataReader("StartTime").ToString())) = 15 Then 'Long.Parse(15) 
+                                            'Increment counter
+                                            intCtr += 1
+
+                                            'Replace last time with this time
+                                            thisTime = CDate(dataReader("StartTime").ToString())
+
+                                            'Check if we have enough slots
+                                            If intCtr = intConsRows Then
+                                                'Set appointment end time
+                                                thisTime = CDate(dataReader("EndTime").ToString())
+
+                                                'Set date
+                                                thisDate = CDate(dataReader("Day").ToString())
+
+                                                'Set found flag
+                                                blnFound = True
+
+                                                'Exit loop
+                                                Exit While
+                                            End If
+                                        Else
+                                            'Reset counter
+                                            intConsRows = 1
+
+                                            'Reset time
+                                            thisTime = Nothing
+                                        End If
+                                    End If
                                 End While
 
-                                Debug.WriteLine(n)
-
                                 dataReader.Close()
-                                'Dim s As String = ""
-                                'For Each thign In strLine
-                                '    s &= thign & " "
-                                'Next
-                                'MessageBox.Show(s)
 
+                                If blnFound Then
+                                    'Alter statement
+                                    Dim strSQL As String
+                                    strSQL = "SET ROWCOUNT 1 " &
+                                        "UPDATE Appointments " &
+                                        "SET PatientTUID = " & intPatientTUID & ", EndTime = '" & thisTime & "', AppointmentLength = " & strLine(4) &
+                                        " OUTPUT inserted.[DoctorTUID]" &
+                                        " WHERE StartTime = '" & thisTime.AddMinutes(Integer.Parse(strLine(4) / -1)) & "' AND Day = '" & thisDate & "' AND DoctorTUID = " & intDoc
+
+                                    ExecuteSQLNonQ(strSQL)
+
+                                    'Make new SQL command to delete those empty appointment slots
+                                    strSQL = "DELETE FROM Appointments WHERE " & "PatientTUID IS NULL AND DoctorTUID = " & intDoc &
+                                        " AND Day = '" & thisDate & "' AND EndTime BETWEEN '" & thisTime.AddMinutes(Integer.Parse(strLine(4) / -1) + 15) & "' AND '" & thisTime & "'"
+
+                                    ExecuteSQLNonQ(strSQL)
+
+                                Else
+                                    MessageBox.Show("We could not find an appointment for " & strLine(1))
+                                End If
                             'Time/day preference
                             Case "T"
 
@@ -513,7 +567,7 @@ Public Class frmMain
         Dim strDayofWeek As String
 
         strSQLCommand = "INSERT INTO Doctors VALUES 
-            ('Ray', 'Strantz'),
+            ('Ray', 'Stantz'),
             ('Henry', 'Jones, Jr.'),
             ('Emmett', 'Brown')"
 
