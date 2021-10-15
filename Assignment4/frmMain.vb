@@ -253,7 +253,11 @@ Public Class frmMain
 
                                     'Make new SQL command to delete those empty appointment slots
                                     strSQL = "DELETE FROM Appointments WHERE " & "PatientTUID IS NULL AND DoctorTUID = " & intDoctorTUID &
-                                        " AND Day = '" & thisDate & "' AND EndTime BETWEEN '" & thisTime.AddMinutes(Integer.Parse(strLine(4) / -1) + 15) & "' AND '" & thisTime & "'"
+                                        " AND Day = '" & thisDate & "' AND EndTime BETWEEN '" & thisTime.AddMinutes(Integer.Parse(strLine(4) / -1)) & "' AND '" & thisTime & "'"
+
+                                    DisconnectFromSQL()
+
+                                    ConnectToSQL(False)
 
                                     ExecuteSQLNonQ(strSQL)
 
@@ -337,14 +341,17 @@ Public Class frmMain
                                     strSQL = "SET ROWCOUNT 1 " &
                                         "UPDATE Appointments " &
                                         "SET PatientTUID = " & intPatientTUID & ", EndTime = '" & thisTime & "', AppointmentLength = " & strLine(4) &
-                                        " OUTPUT inserted.[DoctorTUID]" &
                                         " WHERE StartTime = '" & thisTime.AddMinutes(Integer.Parse(strLine(4) / -1)) & "' AND Day = '" & thisDate & "' AND DoctorTUID = " & intDoc
 
                                     ExecuteSQLNonQ(strSQL)
 
                                     'Make new SQL command to delete those empty appointment slots
                                     strSQL = "DELETE FROM Appointments WHERE " & "PatientTUID IS NULL AND DoctorTUID = " & intDoc &
-                                        " AND Day = '" & thisDate & "' AND EndTime BETWEEN '" & thisTime.AddMinutes(Integer.Parse(strLine(4) / -1) + 15) & "' AND '" & thisTime & "'"
+                                        " AND Day = '" & thisDate & "' AND EndTime BETWEEN '" & thisTime.AddMinutes(Integer.Parse(strLine(4) / -1)) & "' AND '" & thisTime & "'"
+
+                                    DisconnectFromSQL()
+
+                                    ConnectToSQL(False)
 
                                     ExecuteSQLNonQ(strSQL)
 
@@ -353,39 +360,63 @@ Public Class frmMain
                                 End If
                             'Time/day preference
                             Case "T"
+                                'Get day data
+                                Dim aptDay As Date
+                                Dim intToday As Integer = Today.DayOfWeek
+                                Dim dayOfWeek As DayOfWeek
+                                Select Case strLine(3).Substring(2, 1)
+                                    Case "M"
+                                        dayOfWeek = DayOfWeek.Monday
+                                    Case "T"
+                                        dayOfWeek = DayOfWeek.Tuesday
+                                    Case "W"
+                                        dayOfWeek = DayOfWeek.Wednesday
+                                    Case "R"
+                                        dayOfWeek = DayOfWeek.Thursday
+                                    Case "F"
+                                        dayOfWeek = DayOfWeek.Friday
+                                End Select
 
-                                'Get number of consecutive rows we need for this appointment
-                                intConsRows = Integer.Parse(strLine(4)) / 15
+                                'Find next day of the week
+                                Dim intDelta As Integer = dayOfWeek - intToday
+                                If intDelta > 0 Then
+                                    aptDay = Today.AddDays(intDelta)
+                                Else
+                                    aptDay = Today.AddDays(7 + intDelta)
+                                End If
 
-                                'Get all appointments that are available
-                                dataReader = ExecuteSQLReader("SELECT * FROM Appointments WHERE PatientTUID IS NULL")
+                                'Get start and end times
+                                Dim startTime As Date = CDate(strLine(3).Substring(4))
+                                Dim endTime As Date = startTime.AddMinutes(strLine(4))
 
-                                Dim thisTime As Date = Nothing
-                                Dim thisDate As Date = Nothing
+                                Dim strSQL As String = "SET ROWCOUNT 1 " &
+                                "UPDATE Appointments " &
+                                "SET PatientTUID = " & intPatientTUID & ", EndTime = '" & endTime & "', AppointmentLength = " & strLine(4) &
+                                " OUTPUT inserted.[DoctorTUID]" &
+                                " WHERE StartTime = '" & strLine(3).Substring(4) & "' AND Day = '" & aptDay & "'"
 
-                                Dim intCtr As Integer = 1
+                                'Get doctorTUID
+                                dataReader = ExecuteSQLReader(strSQL)
 
-                                Dim blnFound As Boolean = False
-
-                                'While there's data, read it
-                                Dim n As Integer = 0
+                                Dim intDoctorTUID = 0
 
                                 While dataReader.Read()
-                                    n += 1
+                                    intDoctorTUID = dataReader("DoctorTUID")
                                 End While
 
-                                Debug.WriteLine(n)
-
+                                'Close dataReader
                                 dataReader.Close()
 
-                                'Dim s As String = ""
-                                'For Each thign In strLine
-                                '    s &= thign & " "
-                                'Next
-                                'MessageBox.Show(s)
+                                'Make new SQL command to delete those empty appointment slots
+                                strSQL = "DELETE FROM Appointments WHERE " & "PatientTUID IS NULL AND DoctorTUID = " & intDoctorTUID &
+                                        " AND Day = '" & aptDay & "' AND EndTime BETWEEN '" & startTime & "' AND '" & endTime & "'"
 
+                                DisconnectFromSQL()
+
+                                ConnectToSQL(False)
+
+                                ExecuteSQLNonQ(strSQL)
                         End Select
-
                     'Deleting appointment
                     Case "D"
 
