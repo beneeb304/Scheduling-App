@@ -887,9 +887,43 @@ Public Class frmMain
 
         'Determine ff selecting Patients, Doctor Appointments, or Doctor Availability
         If cmbFilter.SelectedItem = "Patients" Then
+            Dim intTUID As Integer
+            Dim dataReader = ExecuteSQLReader("SELECT TUID FROM Patients WHERE Phone = '" & lstSelect.SelectedItem.ToString().Substring(0, 8) & "'")
+            Dim thisDate As Date
+
+            While dataReader.Read()
+                intTUID = dataReader("TUID")
+            End While
+
+            dataReader.Close()
+
+            dataReader = ExecuteSQLReader("SELECT Day, StartTime, EndTime FROM Appointments WHERE PatientTUID = " & intTUID & " ORDER BY Day, StartTime")
+
+            While dataReader.Read()
+                'Get day of week
+                thisDate = CDate(dataReader("Day").ToString())
+
+                'Add to listbox
+                lstDisplay.Items.Add(thisDate.DayOfWeek.ToString() & ", " & CStr(dataReader("Day")) & " from " & dataReader("StartTime").ToString() & " to " & dataReader("EndTime").ToString())
+            End While
+
+            dataReader.Close()
 
         ElseIf cmbFilter.SelectedItem = "Doctor Appointments" Then
+            Dim intTUID As Integer = lstSelect.SelectedItem.ToString().Substring(0, 1)
+            Dim dataReader = ExecuteSQLReader("SELECT Day, StartTime, EndTime FROM Appointments WHERE DoctorTUID = " & intTUID & "AND PatientTUID IS NOT NULL ORDER BY Day, StartTime")
+            Dim thisDate As Date
 
+            'While there's data, read it
+            While dataReader.Read()
+                'Get day of week
+                thisDate = CDate(dataReader("Day").ToString())
+
+                'Add to listbox
+                lstDisplay.Items.Add(thisDate.DayOfWeek.ToString() & ", " & CStr(dataReader("Day")) & " from " & dataReader("StartTime").ToString() & " to " & dataReader("EndTime").ToString())
+            End While
+
+            dataReader.Close()
         ElseIf cmbFilter.SelectedItem = "Doctor Availability" Then
             Dim intTUID As Integer = lstSelect.SelectedItem.ToString().Substring(0, 1)
             Dim dataReader = ExecuteSQLReader("SELECT Day, StartTime, EndTime FROM Appointments WHERE DoctorTUID = " & intTUID & "AND PatientTUID IS NULL ORDER BY Day, StartTime")
