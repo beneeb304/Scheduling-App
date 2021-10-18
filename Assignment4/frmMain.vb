@@ -91,9 +91,9 @@ Public Class frmMain
         'Create String array for pieces of data in each line of text
         Dim strLine() As String
         Dim strPatients As String = ""
-        Dim strAppointments As String = ""
         Dim lstPhone As New List(Of String)
         Dim intConsRows As Integer
+        Dim strSQL As String
 
         'Cycle through each line
         For Each line As String In strLines
@@ -232,7 +232,6 @@ Public Class frmMain
 
                                 If blnFound Then
                                     'Alter statement
-                                    Dim strSQL As String
                                     strSQL = "SET ROWCOUNT 1 " &
                                         "UPDATE Appointments " &
                                         "SET PatientTUID = " & intPatientTUID & ", EndTime = '" & thisTime & "', AppointmentLength = " & strLine(4) &
@@ -286,7 +285,7 @@ Public Class frmMain
                                 Dim intDoc As Integer = dctDocs.Item(strLine(3).Substring(2))
 
                                 'Get all appointments that are available
-                                dataReader = ExecuteSQLReader("SELECT * FROM Appointments WHERE PatientTUID IS NULL AND DoctorTUID = " & intDoc)
+                                dataReader = ExecuteSQLReader("SELECT * FROM Appointments WHERE PatientTUID IS NULL AND DoctorTUID = " & intDoc & " ORDER BY Day, StartTime")
 
                                 Dim thisTime As Date = Nothing
                                 Dim thisDate As Date = Nothing
@@ -337,7 +336,6 @@ Public Class frmMain
 
                                 If blnFound Then
                                     'Alter statement
-                                    Dim strSQL As String
                                     strSQL = "SET ROWCOUNT 1 " &
                                         "UPDATE Appointments " &
                                         "SET PatientTUID = " & intPatientTUID & ", EndTime = '" & thisTime & "', AppointmentLength = " & strLine(4) &
@@ -389,7 +387,7 @@ Public Class frmMain
                                 Dim startTime As Date = CDate(strLine(3).Substring(4))
                                 Dim endTime As Date = startTime.AddMinutes(strLine(4))
 
-                                Dim strSQL As String = "SET ROWCOUNT 1 " &
+                                strSQL = "SET ROWCOUNT 1 " &
                                 "UPDATE Appointments " &
                                 "SET PatientTUID = " & intPatientTUID & ", EndTime = '" & endTime & "', AppointmentLength = " & strLine(4) &
                                 " OUTPUT inserted.[DoctorTUID]" &
@@ -419,7 +417,77 @@ Public Class frmMain
                         End Select
                     'Deleting appointment
                     Case "D"
+                        'Get day data
+                        Dim startTime As Date = strLine(3).Substring(2)
+                        Dim aptDay As Date
+                        Dim intToday As Integer = Today.DayOfWeek
+                        Dim dayOfWeek As DayOfWeek
+                        Select Case strLine(3).Substring(0, 1)
+                            Case "M"
+                                dayOfWeek = DayOfWeek.Monday
+                            Case "T"
+                                dayOfWeek = DayOfWeek.Tuesday
+                            Case "W"
+                                dayOfWeek = DayOfWeek.Wednesday
+                            Case "R"
+                                dayOfWeek = DayOfWeek.Thursday
+                            Case "F"
+                                dayOfWeek = DayOfWeek.Friday
+                        End Select
 
+                        'Find next day of the week
+                        Dim intDelta As Integer = dayOfWeek - intToday
+                        If intDelta > 0 Then
+                            aptDay = Today.AddDays(intDelta)
+                        Else
+                            aptDay = Today.AddDays(7 + intDelta)
+                        End If
+
+                        'Get patient TUID
+                        strSQL = "SELECT TUID FROM Patients WHERE Phone = '" & strLine(1) & "'"
+
+                        Dim dataReader As SqlDataReader = ExecuteSQLReader(strSQL)
+
+                        Dim intPatientTUID = 0
+
+                        While dataReader.Read()
+                            intPatientTUID = dataReader("TUID")
+                        End While
+
+                        dataReader.Close()
+
+                        strSQL = "DELETE FROM Appointments OUTPUT deleted.[AppointmentLength], deleted.[DoctorTUID] " &
+                            "WHERE PatientTUID = " & intPatientTUID & " AND Day = '" & aptDay & "' AND StartTime = '" & startTime & "'"
+
+                        Debug.WriteLine(strSQL)
+
+                        'Get EndTime
+                        dataReader = ExecuteSQLReader(strSQL)
+
+                        Dim intDuration As Integer
+                        Dim intDoctorTUID As Integer
+
+                        While dataReader.Read()
+                            intDuration = dataReader("AppointmentLength")
+                            intDoctorTUID = dataReader("DoctorTUID")
+                        End While
+
+                        'Close dataReader
+                        dataReader.Close()
+
+                        strSQL = "INSERT INTO Appointments VALUES"
+
+                        'Loop for apt duration /15 which will give us how many slots to add back to availability
+                        For i = 1 To intDuration / 15
+                            strSQL &= " (NULL, " & intDoctorTUID & ", '" & aptDay & "', 15, '" & startTime & "', '" & startTime.AddMinutes(intTIMEINCREMENT) & "'),"
+                        Next
+
+                        'Chop off last comma
+                        strSQL = strSQL.Substring(0, strSQL.LastIndexOf(","))
+
+                        Debug.WriteLine(strSQL)
+
+                        ExecuteSQLNonQ(strSQL)
                     'Changing appointment
                     Case "C"
 
@@ -814,7 +882,7 @@ Public Class frmMain
 
         ElseIf cmbFilter.SelectedItem = "Doctor Availability" Then
             Dim intTUID As Integer = lstSelect.SelectedItem.ToString().Substring(0, 1)
-            Dim dataReader = ExecuteSQLReader("SELECT Day, StartTime, EndTime FROM Appointments WHERE DoctorTUID = " & intTUID & "AND PatientTUID IS NULL")
+            Dim dataReader = ExecuteSQLReader("SELECT Day, StartTime, EndTime FROM Appointments WHERE DoctorTUID = " & intTUID & "AND PatientTUID IS NULL ORDER BY Day, StartTime")
             Dim thisDate As Date
 
             'While there's data, read it
