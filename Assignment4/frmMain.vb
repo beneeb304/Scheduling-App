@@ -117,19 +117,10 @@ Public Class frmMain
         'Chop off last comma
         strPatients = strPatients.Substring(0, strPatients.LastIndexOf(","))
 
-        'Connect to SQL Server instance
-        ConnectToSQL(False)
-
         'Execute SQL command
-        ExecuteSQLNonQ(strPatients)
-
-        'Disconnect from the database
-        DisconnectFromSQL()
+        ExecuteSQLNonQ(strPatients, False)
 
         For Each line As String In strLines
-            'Connect to SQL Server instance
-            ConnectToSQL(False)
-
             'Split data by vbTab
             strLine = line.Split(vbTab)
 
@@ -165,86 +156,34 @@ Public Class frmMain
 
                     'Deleting appointment
                     Case "D"
-                        'Get day data
-                        Dim startTime As Date = strLine(3).Substring(2)
-                        Dim aptDay As Date
-                        Dim intToday As Integer = Today.DayOfWeek
-                        Dim dayOfWeek As DayOfWeek
-                        Select Case strLine(3).Substring(0, 1)
-                            Case "M"
-                                dayOfWeek = DayOfWeek.Monday
-                            Case "T"
-                                dayOfWeek = DayOfWeek.Tuesday
-                            Case "W"
-                                dayOfWeek = DayOfWeek.Wednesday
-                            Case "R"
-                                dayOfWeek = DayOfWeek.Thursday
-                            Case "F"
-                                dayOfWeek = DayOfWeek.Friday
-                        End Select
 
-                        'Find next day of the week
-                        Dim intDelta As Integer = dayOfWeek - intToday
-                        If intDelta > 0 Then
-                            aptDay = Today.AddDays(intDelta)
-                        Else
-                            aptDay = Today.AddDays(7 + intDelta)
-                        End If
+                        DeleteAppointment(strLine)
+
+                    'Changing appointment
+                    Case "C"
+                        'Delete first appointment for the patient with phone number
 
                         'Get patient TUID
                         strSQL = "SELECT TUID FROM Patients WHERE Phone = '" & strLine(1) & "'"
-
                         Dim dataReader As SqlDataReader = ExecuteSQLReader(strSQL)
-
                         Dim intPatientTUID = 0
-
                         While dataReader.Read()
                             intPatientTUID = dataReader("TUID")
                         End While
-
                         dataReader.Close()
+                        DisconnectFromSQL()
 
-                        strSQL = "DELETE FROM Appointments OUTPUT deleted.[AppointmentLength], deleted.[DoctorTUID] " &
-                            "WHERE PatientTUID = " & intPatientTUID & " AND Day = '" & aptDay & "' AND StartTime = '" & startTime & "'"
+                        strSQL = "SET ROWCOUNT 1 DELETE FROM Appointments WHERE PatientTUID = " & intPatientTUID
 
-                        'Get EndTime
-                        dataReader = ExecuteSQLReader(strSQL)
+                        ExecuteSQLNonQ(strSQL, False)
 
-                        Dim intDuration As Integer
-                        Dim intDoctorTUID As Integer
-
-                        While dataReader.Read()
-                            intDuration = dataReader("AppointmentLength")
-                            intDoctorTUID = dataReader("DoctorTUID")
-                        End While
-
-                        'Close dataReader
-                        dataReader.Close()
-
-                        strSQL = "INSERT INTO Appointments VALUES"
-
-                        'Loop for apt duration /15 which will give us how many slots to add back to availability
-                        For i = 1 To intDuration / 15
-                            strSQL &= " (NULL, " & intDoctorTUID & ", '" & aptDay & "', 15, '" & startTime & "', '" & startTime.AddMinutes(intTIMEINCREMENT) & "'),"
-
-                            'increment start time
-                            startTime = startTime.AddMinutes(15)
-                        Next
-
-                        'Chop off last comma
-                        strSQL = strSQL.Substring(0, strSQL.LastIndexOf(","))
-
-                        ExecuteSQLNonQ(strSQL)
-                    'Changing appointment
-                    Case "C"
-
+                        'Add back in
+                        AddAppointment(strLine)
                 End Select
             End If
-
-            'Disconnect from the database
-            DisconnectFromSQL()
         Next
     End Sub
+
 
     Private Sub AddAppointment(strLine() As String)
         'SQL String
@@ -264,6 +203,7 @@ Public Class frmMain
             intPatientTUID = Integer.Parse(dataReader("TUID").ToString())
         End While
         dataReader.Close()
+        DisconnectFromSQL()
 
         'Determine preference
         Select Case chrSelector
@@ -321,6 +261,7 @@ Public Class frmMain
                 End While
 
                 dataReader.Close()
+                DisconnectFromSQL()
 
                 If blnFound Then
                     'Alter statement
@@ -341,16 +282,13 @@ Public Class frmMain
 
                     'Close dataReader
                     dataReader.Close()
+                    DisconnectFromSQL()
 
                     'Make new SQL command to delete those empty appointment slots
                     strSQL = "DELETE FROM Appointments WHERE " & "PatientTUID IS NULL AND DoctorTUID = " & intDoctorTUID &
                         " AND Day = '" & thisDate & "' AND EndTime BETWEEN '" & thisTime.AddMinutes(Integer.Parse(strLine(4) / -1)) & "' AND '" & thisTime & "'"
 
-                    DisconnectFromSQL()
-
-                    ConnectToSQL(False)
-
-                    ExecuteSQLNonQ(strSQL)
+                    ExecuteSQLNonQ(strSQL, False)
                 Else
                     MessageBox.Show("We could not find an appointment for " & strLine(1))
                 End If
@@ -368,6 +306,7 @@ Public Class frmMain
 
                 'Close dataReader
                 dataReader.Close()
+                DisconnectFromSQL()
 
                 'Get number of consecutive rows we need for this appointment
                 intConsRows = Integer.Parse(strLine(4)) / 15
@@ -424,6 +363,7 @@ Public Class frmMain
                 End While
 
                 dataReader.Close()
+                DisconnectFromSQL()
 
                 If blnFound Then
                     'Alter statement
@@ -432,17 +372,13 @@ Public Class frmMain
                         "SET PatientTUID = " & intPatientTUID & ", EndTime = '" & thisTime & "', AppointmentLength = " & strLine(4) &
                         " WHERE StartTime = '" & thisTime.AddMinutes(Integer.Parse(strLine(4) / -1)) & "' AND Day = '" & thisDate & "' AND DoctorTUID = " & intDoc
 
-                    ExecuteSQLNonQ(strSQL)
+                    ExecuteSQLNonQ(strSQL, False)
 
                     'Make new SQL command to delete those empty appointment slots
                     strSQL = "DELETE FROM Appointments WHERE " & "PatientTUID IS NULL AND DoctorTUID = " & intDoc &
                         " AND Day = '" & thisDate & "' AND EndTime BETWEEN '" & thisTime.AddMinutes(Integer.Parse(strLine(4) / -1)) & "' AND '" & thisTime & "'"
 
-                    DisconnectFromSQL()
-
-                    ConnectToSQL(False)
-
-                    ExecuteSQLNonQ(strSQL)
+                    ExecuteSQLNonQ(strSQL, False)
 
                 Else
                     MessageBox.Show("We could not find an appointment for " & strLine(1))
@@ -495,18 +431,88 @@ Public Class frmMain
 
                 'Close dataReader
                 dataReader.Close()
+                DisconnectFromSQL()
 
                 'Make new SQL command to delete those empty appointment slots
-
                 strSQL = "DELETE FROM Appointments WHERE " & "PatientTUID IS NULL AND DoctorTUID = " & intDoctorTUID &
                         " AND Day = '" & aptDay & "' AND EndTime BETWEEN '" & startTime.AddMinutes(15) & "' AND '" & endTime & "'"
 
-                DisconnectFromSQL()
-
-                ConnectToSQL(False)
-
-                ExecuteSQLNonQ(strSQL)
+                ExecuteSQLNonQ(strSQL, False)
         End Select
+    End Sub
+
+    Private Sub DeleteAppointment(strLine() As String)
+        'SQL String
+        Dim strSQL As String
+
+        'Get day data
+        Dim startTime As Date = strLine(3).Substring(2)
+        Dim aptDay As Date
+        Dim intToday As Integer = Today.DayOfWeek
+        Dim dayOfWeek As DayOfWeek
+        Select Case strLine(3).Substring(0, 1)
+            Case "M"
+                dayOfWeek = DayOfWeek.Monday
+            Case "T"
+                dayOfWeek = DayOfWeek.Tuesday
+            Case "W"
+                dayOfWeek = DayOfWeek.Wednesday
+            Case "R"
+                dayOfWeek = DayOfWeek.Thursday
+            Case "F"
+                dayOfWeek = DayOfWeek.Friday
+        End Select
+
+        'Find next day of the week
+        Dim intDelta As Integer = dayOfWeek - intToday
+        If intDelta > 0 Then
+            aptDay = Today.AddDays(intDelta)
+        Else
+            aptDay = Today.AddDays(7 + intDelta)
+        End If
+
+        'Get patient TUID
+        strSQL = "SELECT TUID FROM Patients WHERE Phone = '" & strLine(1) & "'"
+        Dim dataReader As SqlDataReader = ExecuteSQLReader(strSQL)
+        Dim intPatientTUID = 0
+        While dataReader.Read()
+            intPatientTUID = dataReader("TUID")
+        End While
+        dataReader.Close()
+        DisconnectFromSQL()
+
+        strSQL = "DELETE FROM Appointments OUTPUT deleted.[AppointmentLength], deleted.[DoctorTUID] " &
+            "WHERE PatientTUID = " & intPatientTUID & " AND Day = '" & aptDay & "' AND StartTime = '" & startTime & "'"
+
+        'Get EndTime
+        dataReader = ExecuteSQLReader(strSQL)
+
+        Dim intDuration As Integer
+        Dim intDoctorTUID As Integer
+
+        While dataReader.Read()
+            intDuration = dataReader("AppointmentLength")
+            intDoctorTUID = dataReader("DoctorTUID")
+        End While
+
+        'Close dataReader
+        dataReader.Close()
+        DisconnectFromSQL()
+
+        strSQL = "INSERT INTO Appointments VALUES"
+
+        'Loop for apt duration /15 which will give us how many slots to add back to availability
+        For i = 1 To intDuration / 15
+            strSQL &= " (NULL, " & intDoctorTUID & ", '" & aptDay & "', 15, '" & startTime & "', '" & startTime.AddMinutes(intTIMEINCREMENT) & "'),"
+
+            'increment start time
+            startTime = startTime.AddMinutes(15)
+        Next
+
+        'Chop off last comma
+        strSQL = strSQL.Substring(0, strSQL.LastIndexOf(","))
+
+        ExecuteSQLNonQ(strSQL, False)
     End Sub
 
     Private Sub AddPatient(strPhone As String)
@@ -529,10 +535,13 @@ Public Class frmMain
             "'" & strData(2) & "')"
 
         'Execute SQL command
-        ExecuteSQLNonQ(strSQLCommand)
+        ExecuteSQLNonQ(strSQLCommand, False)
     End Sub
 
-    Private Sub ExecuteSQLNonQ(strSQL As String)
+    Private Sub ExecuteSQLNonQ(strSQL As String, blnSecurity As Boolean)
+        'Connect to SQL
+        ConnectToSQL(blnSecurity)
+
         'Build a SQL Server database from scratch
         Dim DBCmd As New SqlCommand With {
             .CommandText = strSQL,
@@ -544,9 +553,15 @@ Public Class frmMain
         Catch ex As Exception
             MessageBox.Show(ex.ToString(), "Error executing SQL statement.")
         End Try
+
+        'Disconnect from Database
+        DisconnectFromSQL()
     End Sub
 
     Private Function ExecuteSQLReader(strSQL As String) As SqlDataReader
+        'Connect to SQL
+        ConnectToSQL(False)
+
         'Build a SQL Server database from scratch
         Dim DBCmd As New SqlCommand()
         Dim dataReader As SqlDataReader = Nothing
@@ -597,26 +612,14 @@ Public Class frmMain
             "(NAME = '" & strDBNAME & "', " &
             "FILENAME = '" & strDBPATH & "')"
 
-        'Connect to SQL Server instance
-        ConnectToSQL(True)
-
         'Execute SQL command
-        ExecuteSQLNonQ(strSQLCommand)
-
-        'Close the connection and reopen it pointing at the scheduling database
-        DisconnectFromSQL()
-
-        'Connect to SQL with security
-        ConnectToSQL(False)
+        ExecuteSQLNonQ(strSQLCommand, True)
 
         'Build database tables
         BuildTables()
 
         'Insert the initial datasets
         InsertInitialData()
-
-        'We can check to see if we're open before trying to issue a connection close
-        DisconnectFromSQL()
     End Sub
 
     Private Sub BuildTables()
@@ -630,7 +633,7 @@ Public Class frmMain
             LastName varchar(50) NOT NULL)"
 
         'Execute SQL command
-        ExecuteSQLNonQ(strSQLCommand)
+        ExecuteSQLNonQ(strSQLCommand, False)
 
         'Build the Availability Table
         strSQLCommand = "CREATE TABLE Availability
@@ -642,7 +645,7 @@ Public Class frmMain
             PatientCount int NOT NULL)"
 
         'Execute SQL command
-        ExecuteSQLNonQ(strSQLCommand)
+        ExecuteSQLNonQ(strSQLCommand, False)
 
         'Build the Patients Table
         strSQLCommand = "CREATE TABLE Patients
@@ -653,7 +656,7 @@ Public Class frmMain
              Insurance varchar(20) NOT NULL)"
 
         'Execute SQL command
-        ExecuteSQLNonQ(strSQLCommand)
+        ExecuteSQLNonQ(strSQLCommand, False)
 
         'Build the Appointments Table
         strSQLCommand = "CREATE TABLE Appointments
@@ -666,7 +669,7 @@ Public Class frmMain
             EndTime TIME(0))"
 
         'Execute SQL command
-        ExecuteSQLNonQ(strSQLCommand)
+        ExecuteSQLNonQ(strSQLCommand, False)
     End Sub
 
     Private Sub InsertInitialData()
@@ -677,11 +680,11 @@ Public Class frmMain
 
         strSQLCommand = "INSERT INTO Doctors VALUES 
             ('Ray', 'Stantz'),
-            ('Henry', 'Jones, Jr.'),
+            ('Henry', 'Jones'),
             ('Emmett', 'Brown')"
 
         'Execute SQL command
-        ExecuteSQLNonQ(strSQLCommand)
+        ExecuteSQLNonQ(strSQLCommand, False)
 
         strSQLCommand = "INSERT INTO Availability VALUES 
             (1, 'M', '10:00', '14:00', 7),
@@ -696,7 +699,7 @@ Public Class frmMain
             (3, 'F', '11:00', '16:00', 9)"
 
         'Execute SQL command
-        ExecuteSQLNonQ(strSQLCommand)
+        ExecuteSQLNonQ(strSQLCommand, False)
 
         'Create today date object
         Dim thisDate As Date = Date.Today
@@ -787,11 +790,12 @@ Public Class frmMain
 
             'Close datareader
             dataReader.Close()
+            DisconnectFromSQL()
 
             'Chop off last comma
             strSQLCommand = strSQLCommand.Substring(0, strSQLCommand.LastIndexOf(","))
 
-            ExecuteSQLNonQ(strSQLCommand)
+            ExecuteSQLNonQ(strSQLCommand, False)
         End If
     End Sub
 
@@ -801,23 +805,18 @@ Public Class frmMain
         'String to hold SQL command text
         Dim strSQLCommand As String
 
-        'Connect to SQL Server instance
-        ConnectToSQL(True)
-
         'Try to force single ownership of the database so that we have the permissions to delete it
         strSQLCommand = "ALTER DATABASE [" & strDBNAME & "] SET " &
             "SINGLE_USER WITH ROLLBACK IMMEDIATE"
 
         'Execute SQL command
-        ExecuteSQLNonQ(strSQLCommand)
+        ExecuteSQLNonQ(strSQLCommand, True)
 
         'Now, drop the database
         strSQLCommand = "DROP DATABASE " & strDBNAME
 
         'Execute SQL command
-        ExecuteSQLNonQ(strSQLCommand)
-
-        DisconnectFromSQL()
+        ExecuteSQLNonQ(strSQLCommand, True)
     End Sub
 
     Private Sub txtFileName_TextChanged(sender As Object, e As EventArgs) Handles txtFileName.TextChanged
@@ -836,8 +835,6 @@ Public Class frmMain
         lstSelect.Items.Clear()
         lstDisplay.Items.Clear()
 
-        ConnectToSQL(False)
-
         Dim dataReader As SqlDataReader
 
         If cmbFilter.SelectedItem = "Patients" Then
@@ -853,6 +850,7 @@ Public Class frmMain
 
             'Tidy up
             dataReader.Close()
+            DisconnectFromSQL()
         ElseIf cmbFilter.SelectedItem = "Doctor Appointments" Or cmbFilter.SelectedItem = "Doctor Availability" Then
             strSQLCommand = "SELECT TUID, FirstName, LastName FROM Doctors"
 
@@ -866,10 +864,8 @@ Public Class frmMain
 
             'Tidy up
             dataReader.Close()
+            DisconnectFromSQL()
         End If
-
-        'Tidy up
-        DisconnectFromSQL()
     End Sub
 
     Private Sub btnAddPatient_Click(sender As Object, e As EventArgs) Handles btnAddPatient.Click
@@ -883,8 +879,6 @@ Public Class frmMain
         'Clear listboxes
         lstDisplay.Items.Clear()
 
-        ConnectToSQL(False)
-
         'Determine ff selecting Patients, Doctor Appointments, or Doctor Availability
         If cmbFilter.SelectedItem = "Patients" Then
             Dim intTUID As Integer
@@ -896,6 +890,7 @@ Public Class frmMain
             End While
 
             dataReader.Close()
+            DisconnectFromSQL()
 
             dataReader = ExecuteSQLReader("SELECT Day, StartTime, EndTime FROM Appointments WHERE PatientTUID = " & intTUID & " ORDER BY Day, StartTime")
 
@@ -908,6 +903,7 @@ Public Class frmMain
             End While
 
             dataReader.Close()
+            DisconnectFromSQL()
 
         ElseIf cmbFilter.SelectedItem = "Doctor Appointments" Then
             Dim intTUID As Integer = lstSelect.SelectedItem.ToString().Substring(0, 1)
@@ -924,6 +920,7 @@ Public Class frmMain
             End While
 
             dataReader.Close()
+            DisconnectFromSQL()
         ElseIf cmbFilter.SelectedItem = "Doctor Availability" Then
             Dim intTUID As Integer = lstSelect.SelectedItem.ToString().Substring(0, 1)
             Dim dataReader = ExecuteSQLReader("SELECT Day, StartTime, EndTime FROM Appointments WHERE DoctorTUID = " & intTUID & "AND PatientTUID IS NULL ORDER BY Day, StartTime")
@@ -939,6 +936,7 @@ Public Class frmMain
             End While
 
             dataReader.Close()
+            DisconnectFromSQL()
         End If
     End Sub
 End Class
