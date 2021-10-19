@@ -868,13 +868,6 @@ Public Class frmMain
         End If
     End Sub
 
-    Private Sub btnAddPatient_Click(sender As Object, e As EventArgs) Handles btnAddPatient.Click
-        'Get patient's insurance provider
-        Dim strPhone As String = InputBox("Please enter the patient's phone number.", "New patient! Please fill out their information.")
-
-        AddPatient(strPhone)
-    End Sub
-
     Private Sub lstSelect_SelectedIndexChanged(sender As Object, e As EventArgs) Handles lstSelect.SelectedIndexChanged
         'Clear listboxes
         lstDisplay.Items.Clear()
@@ -931,12 +924,60 @@ Public Class frmMain
                 'Get day of week
                 thisDate = CDate(dataReader("Day").ToString())
 
-                'Add to listbox
-                lstDisplay.Items.Add(thisDate.DayOfWeek.ToString() & ", " & CStr(dataReader("Day")) & " from " & dataReader("StartTime").ToString() & " to " & dataReader("EndTime").ToString())
+                'Check availability for day
+                If GetAvailability(thisDate, intTUID) Then
+                    'Add to listbox
+                    lstDisplay.Items.Add(thisDate.DayOfWeek.ToString() & ", " & CStr(dataReader("Day")) & " from " & dataReader("StartTime").ToString() & " to " & dataReader("EndTime").ToString())
+                End If
             End While
-
             dataReader.Close()
             DisconnectFromSQL()
         End If
     End Sub
+
+    Private Function GetAvailability(thisDate As Date, intDoctor As Integer) As Boolean
+        Dim chrDay As Char = ""
+        Dim intLimit As Integer
+        Dim intCount As Integer
+
+        'First, get day letter
+        Select Case thisDate.DayOfWeek.ToString()
+            Case "Monday"
+                chrDay = "M"
+            Case "Tuesday"
+                chrDay = "T"
+            Case "Wednesday"
+                chrDay = "W"
+            Case "Thursday"
+                chrDay = "R"
+            Case "Friday"
+                chrDay = "F"
+        End Select
+
+        'Get patient limit for our doc
+        Dim dataReader = ExecuteSQLReader("SELECT PatientCount FROM Availability WHERE Day = '" & chrDay & "' AND DoctorTUID = " & intDoctor)
+        While dataReader.Read()
+            intLimit = dataReader("PatientCount")
+        End While
+        dataReader.Close()
+        DisconnectFromSQL()
+
+        'Get current patients assigned to our doc on this day
+        dataReader = ExecuteSQLReader("SELECT COUNT(*) FROM Appointments WHERE Day = '" & thisDate & "' AND DoctorTUID = " & intDoctor & " AND PatientTUID IS NOT NULL")
+        While dataReader.Read()
+            intCount = dataReader("")
+        End While
+        dataReader.Close()
+        DisconnectFromSQL()
+
+        'Check if the doc has reached his patient limit
+        If intCount >= intLimit Then
+            'If yes
+            Return False
+        Else
+            'If no
+            Return True
+        End If
+    End Function
+
 End Class

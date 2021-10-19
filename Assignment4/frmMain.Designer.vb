@@ -1,9 +1,9 @@
-﻿<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()> _
+﻿<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()>
 Partial Class frmMain
     Inherits System.Windows.Forms.Form
 
     'Form overrides dispose to clean up the component list.
-    <System.Diagnostics.DebuggerNonUserCode()> _
+    <System.Diagnostics.DebuggerNonUserCode()>
     Protected Overrides Sub Dispose(ByVal disposing As Boolean)
         Try
             If disposing AndAlso components IsNot Nothing Then
@@ -20,7 +20,7 @@ Partial Class frmMain
     'NOTE: The following procedure is required by the Windows Form Designer
     'It can be modified using the Windows Form Designer.  
     'Do not modify it using the code editor.
-    <System.Diagnostics.DebuggerStepThrough()> _
+    <System.Diagnostics.DebuggerStepThrough()>
     Private Sub InitializeComponent()
         Me.lstSelect = New System.Windows.Forms.ListBox()
         Me.Label1 = New System.Windows.Forms.Label()
@@ -31,9 +31,6 @@ Partial Class frmMain
         Me.btnEnterFile = New System.Windows.Forms.Button()
         Me.btnSelectFile = New System.Windows.Forms.Button()
         Me.cmbFilter = New System.Windows.Forms.ComboBox()
-        Me.btnAddPatient = New System.Windows.Forms.Button()
-        Me.btnCancel = New System.Windows.Forms.Button()
-        Me.btnChange = New System.Windows.Forms.Button()
         Me.SuspendLayout()
         '
         'lstSelect
@@ -77,7 +74,7 @@ Partial Class frmMain
         '
         'btnQuit
         '
-        Me.btnQuit.Location = New System.Drawing.Point(483, 356)
+        Me.btnQuit.Location = New System.Drawing.Point(482, 289)
         Me.btnQuit.Margin = New System.Windows.Forms.Padding(2)
         Me.btnQuit.Name = "btnQuit"
         Me.btnQuit.Size = New System.Drawing.Size(105, 28)
@@ -87,17 +84,18 @@ Partial Class frmMain
         '
         'txtFileName
         '
-        Me.txtFileName.Location = New System.Drawing.Point(231, 361)
+        Me.txtFileName.Location = New System.Drawing.Point(230, 294)
         Me.txtFileName.Margin = New System.Windows.Forms.Padding(2)
         Me.txtFileName.Name = "txtFileName"
         Me.txtFileName.ReadOnly = True
         Me.txtFileName.Size = New System.Drawing.Size(248, 20)
         Me.txtFileName.TabIndex = 10
+        Me.txtFileName.TabStop = False
         '
         'btnEnterFile
         '
         Me.btnEnterFile.Enabled = False
-        Me.btnEnterFile.Location = New System.Drawing.Point(121, 356)
+        Me.btnEnterFile.Location = New System.Drawing.Point(120, 289)
         Me.btnEnterFile.Margin = New System.Windows.Forms.Padding(2)
         Me.btnEnterFile.Name = "btnEnterFile"
         Me.btnEnterFile.Size = New System.Drawing.Size(106, 28)
@@ -107,7 +105,7 @@ Partial Class frmMain
         '
         'btnSelectFile
         '
-        Me.btnSelectFile.Location = New System.Drawing.Point(11, 356)
+        Me.btnSelectFile.Location = New System.Drawing.Point(10, 289)
         Me.btnSelectFile.Margin = New System.Windows.Forms.Padding(2)
         Me.btnSelectFile.Name = "btnSelectFile"
         Me.btnSelectFile.Size = New System.Drawing.Size(106, 28)
@@ -126,44 +124,11 @@ Partial Class frmMain
         Me.cmbFilter.Size = New System.Drawing.Size(147, 21)
         Me.cmbFilter.TabIndex = 12
         '
-        'btnAddPatient
-        '
-        Me.btnAddPatient.Location = New System.Drawing.Point(10, 297)
-        Me.btnAddPatient.Margin = New System.Windows.Forms.Padding(2)
-        Me.btnAddPatient.Name = "btnAddPatient"
-        Me.btnAddPatient.Size = New System.Drawing.Size(175, 55)
-        Me.btnAddPatient.TabIndex = 13
-        Me.btnAddPatient.Text = "Add New Patient"
-        Me.btnAddPatient.UseVisualStyleBackColor = True
-        '
-        'btnCancel
-        '
-        Me.btnCancel.Location = New System.Drawing.Point(211, 297)
-        Me.btnCancel.Margin = New System.Windows.Forms.Padding(2)
-        Me.btnCancel.Name = "btnCancel"
-        Me.btnCancel.Size = New System.Drawing.Size(175, 55)
-        Me.btnCancel.TabIndex = 14
-        Me.btnCancel.Text = "Cancel Appointment"
-        Me.btnCancel.UseVisualStyleBackColor = True
-        '
-        'btnChange
-        '
-        Me.btnChange.Location = New System.Drawing.Point(413, 297)
-        Me.btnChange.Margin = New System.Windows.Forms.Padding(2)
-        Me.btnChange.Name = "btnChange"
-        Me.btnChange.Size = New System.Drawing.Size(175, 55)
-        Me.btnChange.TabIndex = 15
-        Me.btnChange.Text = "Change Appointment"
-        Me.btnChange.UseVisualStyleBackColor = True
-        '
         'frmMain
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 13.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
-        Me.ClientSize = New System.Drawing.Size(600, 394)
-        Me.Controls.Add(Me.btnChange)
-        Me.Controls.Add(Me.btnCancel)
-        Me.Controls.Add(Me.btnAddPatient)
+        Me.ClientSize = New System.Drawing.Size(600, 324)
         Me.Controls.Add(Me.cmbFilter)
         Me.Controls.Add(Me.btnQuit)
         Me.Controls.Add(Me.txtFileName)
@@ -190,7 +155,4 @@ Partial Class frmMain
     Friend WithEvents btnEnterFile As Button
     Friend WithEvents btnSelectFile As Button
     Friend WithEvents cmbFilter As ComboBox
-    Friend WithEvents btnAddPatient As Button
-    Friend WithEvents btnChange As Button
-    Friend WithEvents btnCancel As Button
 End Class
