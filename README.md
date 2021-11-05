@@ -1,5 +1,5 @@
 # Scheduling-App
-Doctor and patient scheduling using VB.NET and SQL Server. Includes a GUI for easy access.
+Doctor and patient scheduling using VB.NET and SQL Server. All database components are built and connected completely through code do ensure compatability on any computer running SQL Server.
 
 Main Screen
 ![Main Screen](Images/Picture1.png)
